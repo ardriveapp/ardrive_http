@@ -13,7 +13,7 @@ void main() {
   );
 
   tearDownAll(() => http.get(url: '$baseUrl/exit'));
-  group('ArdriveNetwork', () {
+  group('ArDriveHTTP', () {
     test('can be instantiated', () {
       expect(http, isNotNull);
     });
