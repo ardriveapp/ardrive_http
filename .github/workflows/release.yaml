@@ -27,6 +27,7 @@ jobs:
                 tag_name: process.env.TITLE,
                 name: process.env.TITLE,
                 body: process.env.BODY,
+                target_commitish: 'main',
                 draft: true
               });
             } catch (error) {
