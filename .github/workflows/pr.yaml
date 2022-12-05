@@ -1,0 +1,33 @@
+name: 'PR build and test'
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      # Install Flutter
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.3.9'
+          channel: 'stable'
+
+      # Install Chrome
+      - uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      - name: Install script_runner
+        run: flutter pub global activate script_runner
+
+      - name: Download dependencies
+        run: flutter clean && flutter pub get
+
+      - name: Test package
+        run: scr test
