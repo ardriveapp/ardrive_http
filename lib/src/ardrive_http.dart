@@ -23,7 +23,7 @@ class ArDriveHTTP {
     this.noLogs = false,
   });
 
-  Dio dio() {
+  Dio _dio() {
     final dio = Dio();
 
     if (!noLogs) {
@@ -65,6 +65,24 @@ class ArDriveHTTP {
     return await compute(_getIO, getIOParams);
   }
 
+  Future<ArDriveHTTPResponse> postBytes({
+    required String url,
+    required Uint8List dataBytes,
+  }) async {
+    final Map postIOParams = <String, dynamic>{};
+    postIOParams['url'] = url;
+    postIOParams['dataBytes'] = dataBytes;
+    if (kIsWeb) {
+      if (await _loadWebWorkers()) {
+        return await _postBytesWeb(url: url, data: dataBytes);
+      } else {
+        return await _postBytesIO(postIOParams);
+      }
+    }
+
+    return await compute(_postBytesIO, postIOParams);
+  }
+
   Future<ArDriveHTTPResponse> getJson(String url) async {
     return get(url: url, isJson: true);
   }
@@ -80,13 +98,38 @@ class ArDriveHTTP {
     try {
       Response response;
       if (asBytes) {
-        response = await dio().get<List<int>>(
+        response = await _dio().get<List<int>>(
           url,
           options: Options(responseType: ResponseType.bytes),
         );
       } else {
-        response = await dio().get(url);
+        response = await _dio().get(url);
       }
+
+      return ArDriveHTTPResponse(
+        data: response.data,
+        statusCode: response.statusCode,
+        statusMessage: response.statusMessage,
+        retryAttempts: retryAttempts,
+      );
+    } catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        dioException: error,
+      );
+    }
+  }
+
+  Future<ArDriveHTTPResponse> _postBytesIO(Map params) async {
+    final String url = params['url'];
+    final bool dataBytes = params['dataBytes'];
+
+    try {
+      Response response = await _dio().post(
+        url,
+        data: Stream.value([dataBytes]),
+        options: Options(contentType: 'application/octet-stream'),
+      );
 
       return ArDriveHTTPResponse(
         data: response.data,
@@ -129,6 +172,43 @@ class ArDriveHTTP {
 
       return ArDriveHTTPResponse(
         data: asBytes ? Uint8List.view(response['data']) : response['data'],
+        statusCode: response['statusCode'],
+        statusMessage: response['statusMessage'],
+        retryAttempts: response['retryAttempts'],
+      );
+    } catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        dioException: error,
+      );
+    }
+  }
+
+  Future<ArDriveHTTPResponse> _postBytesWeb({
+    required String url,
+    required Uint8List data,
+  }) async {
+    try {
+      final LinkedHashMap<dynamic, dynamic> response =
+          await JsIsolatedWorker().run(
+        functionName: 'post',
+        arguments: [
+          url,
+          data,
+          retries,
+          retryDelayMs,
+          noLogs,
+        ],
+      );
+
+      if (response['error'] != null) {
+        retryAttempts = response['retryAttempts'];
+
+        throw response['error'];
+      }
+
+      return ArDriveHTTPResponse(
+        data: response['data'],
         statusCode: response['statusCode'],
         statusMessage: response['statusMessage'],
         retryAttempts: response['retryAttempts'],
