@@ -74,7 +74,7 @@ class ArDriveHTTP {
     postIOParams['dataBytes'] = dataBytes;
     if (kIsWeb) {
       if (await _loadWebWorkers()) {
-        return await _postBytesWeb(url: url, data: dataBytes);
+        return await _postBytesWeb(url: url, dataBytes: dataBytes);
       } else {
         return await _postBytesIO(postIOParams);
       }
@@ -186,15 +186,15 @@ class ArDriveHTTP {
 
   Future<ArDriveHTTPResponse> _postBytesWeb({
     required String url,
-    required Uint8List data,
+    required Uint8List dataBytes,
   }) async {
     try {
       final LinkedHashMap<dynamic, dynamic> response =
           await JsIsolatedWorker().run(
-        functionName: 'post',
+        functionName: 'postBytes',
         arguments: [
           url,
-          data,
+          dataBytes,
           retries,
           retryDelayMs,
           noLogs,
