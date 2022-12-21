@@ -82,6 +82,17 @@ Future<void> main() async {
     },
   );
 
+  app.post(
+    '/postBytes',
+    (Request request) => Response.ok(
+      const JsonEncoder.withIndent(' ').convert({'message': 'ok'}),
+      headers: {
+        'content-type': 'application/json',
+        'access-control-allow-origin': '*',
+      },
+    ),
+  );
+
   // ignore: avoid_print
   print('Serving at http://${server.address.host}:${server.port}');
 }

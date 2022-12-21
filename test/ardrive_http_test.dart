@@ -105,5 +105,17 @@ void main() {
             )));
       });
     });
+    group('post method', () {
+      test('accepts data and sends ok', () async {
+        const String url = '$baseUrl/postBytes';
+        final response = await http.postBytes(
+          url: url,
+          dataBytes: Uint8List(10),
+        );
+
+        expect(response.data['message'], 'ok');
+        expect(response.retryAttempts, 0);
+      });
+    });
   });
 }

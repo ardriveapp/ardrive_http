@@ -122,12 +122,12 @@ class ArDriveHTTP {
 
   Future<ArDriveHTTPResponse> _postBytesIO(Map params) async {
     final String url = params['url'];
-    final bool dataBytes = params['dataBytes'];
+    final Uint8List dataBytes = params['dataBytes'];
 
     try {
       Response response = await _dio().post(
         url,
-        data: Stream.value([dataBytes]),
+        data: Stream.fromIterable([dataBytes]),
         options: Options(contentType: 'application/octet-stream'),
       );
 
