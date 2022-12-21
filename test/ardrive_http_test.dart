@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import './webserver.dart';
 
-const String baseUrl = 'http://localhost:8080';
+const String baseUrl = 'http://127.0.0.1:8080';
 
 void main() {
   final http = ArDriveHTTP(
