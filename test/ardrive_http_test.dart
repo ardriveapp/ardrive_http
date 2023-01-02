@@ -1,4 +1,5 @@
 import 'package:ardrive_http/ardrive_http.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,22 +14,13 @@ void main() {
   );
 
   tearDownAll(() => http.get(url: '$baseUrl/exit'));
+
   group('ArDriveHTTP', () {
     test('can be instantiated', () {
       expect(http, isNotNull);
     });
 
     group('get method', () {
-      test('throws when isJson and asBytes are used together', () async {
-        final response = http.get(
-          url: baseUrl,
-          isJson: true,
-          asBytes: true,
-        );
-
-        expect(() => response, throwsA(const TypeMatcher<ArgumentError>()));
-      });
-
       test('returns plain response data', () async {
         const String url = '$baseUrl/getText';
         final response = await http.get(url: url);
@@ -40,7 +32,8 @@ void main() {
       test('returns decoded json response', () async {
         const String url = '$baseUrl/getJson';
 
-        final getResponse = await http.get(url: url, isJson: true);
+        final getResponse =
+            await http.get(url: url, responseType: ResponseType.json);
 
         expect(getResponse.data['message'], 'ok');
         expect(getResponse.retryAttempts, 0);
@@ -54,7 +47,8 @@ void main() {
       test('returns byte response', () async {
         const String url = '$baseUrl/getText';
 
-        final getResponse = await http.get(url: url, asBytes: true);
+        final getResponse =
+            await http.get(url: url, responseType: ResponseType.bytes);
 
         expect(getResponse.data, Uint8List.fromList([111, 107]));
         expect(getResponse.retryAttempts, 0);
@@ -105,7 +99,8 @@ void main() {
             )));
       });
     });
-    group('post method', () {
+
+    group('postBytes method', () {
       test('accepts data and sends ok', () async {
         const String url = '$baseUrl/postBytes';
         final response = await http.postBytes(
@@ -115,7 +110,7 @@ void main() {
 
         expect(response.data['message'], 'ok');
         expect(response.retryAttempts, 0);
-      });
+      }, onPlatform: {'browser': const Skip('Not yet supported on browsers.')});
     });
   });
 }
