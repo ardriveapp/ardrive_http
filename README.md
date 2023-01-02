@@ -16,7 +16,7 @@ ArDriveHTTP is a package to perform network calls for ArDrive Web. It uses Isola
 
 ## Getting started
 
-In order to use this package you need to copy `ardrive-http.js` and `workers.js` to `web` folder so they can be dynamic imported when some `ArDriveHTTP` method is called.
+In order to use this package you need to copy `ardrive-http.js` and `workers.js` from `js/dist` folder to your project's `web` folder so they can be dynamic imported when some `ArDriveHTTP` method is called.
 
 ## Usage
 
@@ -62,4 +62,33 @@ final bytesResponse = await ArDriveHTTP().get(
 );
 // OR
 final getBytesResponse = await ArDriveHTTP().getAsBytes('https://url');
+```
+
+## Building
+
+### Typescript
+
+This project uses NodeJS version 18 and Yarn.
+All the typescript code used by ArDriveHTTP to run network calls in the browser lives in the `js` folder.
+
+#### Getting dependencies
+
+```sh
+yarn
+```
+
+#### Building
+
+```sh
+yarn build
+```
+
+This command will transpile and bundle all typescript code to a minified javascript file called `ardrive-http.js` in `dist` folder.
+
+#### Watching
+
+You can use the following command to automatically rebuild the javascript file whenever a change in the code happens:
+
+```sh
+yarn watch
 ```

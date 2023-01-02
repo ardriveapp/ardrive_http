@@ -1,1 +1,1 @@
-../lib/src/js/worker.js
+../js/dist/worker.js
