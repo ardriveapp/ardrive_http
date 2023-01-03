@@ -112,5 +112,50 @@ void main() {
         expect(response.retryAttempts, 0);
       }, onPlatform: {'browser': const Skip('Not yet supported on browsers.')});
     });
+    test('fail without retry', () async {
+      const String url = '$baseUrl/404';
+
+      await expectLater(
+          () => http.postBytes(url: url, dataBytes: Uint8List(10)),
+          throwsA(const ArDriveHTTPException(
+            retryAttempts: 0,
+            dioException: {},
+          )));
+    });
+
+    for (int statusCode in retryStatusCodes) {
+      test('retry 8 times by default when response is $statusCode', () async {
+        final url = '$baseUrl/$statusCode';
+
+        await expectLater(
+          () => http.get(url: url),
+          throwsA(
+            const ArDriveHTTPException(
+              retryAttempts: 8,
+              dioException: {},
+            ),
+          ),
+        );
+      });
+    }
+
+    test('retry 4 times', () async {
+      final http = ArDriveHTTP(
+        retries: 4,
+        retryDelayMs: 0,
+        noLogs: true,
+      );
+      const String url = '$baseUrl/429';
+
+      await expectLater(
+        () => http.postBytes(url: url, dataBytes: Uint8List(10)),
+        throwsA(
+          const ArDriveHTTPException(
+            retryAttempts: 4,
+            dioException: {},
+          ),
+        ),
+      );
+    });
   });
 }
