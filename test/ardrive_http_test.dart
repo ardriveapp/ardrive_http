@@ -146,14 +146,11 @@ void main() {
         noLogs: true,
       );
       const String url = '$baseUrl/429';
-
       await expectLater(
         () => http.postBytes(url: url, dataBytes: Uint8List(10)),
-        throwsA(
-          const ArDriveHTTPException(
-            retryAttempts: 4,
-            dioException: {},
-          ),
+        const ArDriveHTTPException(
+          retryAttempts: 4,
+          dioException: {},
         ),
       );
     });

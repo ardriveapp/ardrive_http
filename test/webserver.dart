@@ -59,13 +59,35 @@ Future<void> main() async {
   for (int statusCode in retryStatusCodes) {
     app.get(
       '/$statusCode',
-      (Request request) => Response(statusCode, headers: {
-        'access-control-allow-origin': '*',
-      }),
+      (Request request) => Response(
+        statusCode,
+        headers: {
+          'access-control-allow-origin': '*',
+        },
+      ),
+    );
+  }
+
+  for (int statusCode in retryStatusCodes) {
+    app.post(
+      '/$statusCode',
+      (Request request) => Response(
+        statusCode,
+        headers: {
+          'access-control-allow-origin': '*',
+        },
+      ),
     );
   }
 
   app.get(
+    '/404',
+    (Request request) => Response(404, headers: {
+      'access-control-allow-origin': '*',
+    }),
+  );
+
+  app.post(
     '/404',
     (Request request) => Response(404, headers: {
       'access-control-allow-origin': '*',
