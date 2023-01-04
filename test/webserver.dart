@@ -66,9 +66,7 @@ Future<void> main() async {
         },
       ),
     );
-  }
 
-  for (int statusCode in retryStatusCodes) {
     app.post(
       '/$statusCode',
       (Request request) => Response(
