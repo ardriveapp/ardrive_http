@@ -1,8 +1,42 @@
-import axios, { AxiosError } from 'axios';
-import axiosRetry from 'axios-retry';
+// Types
+type FetchResponseType = 'text' | 'json' | 'bytes';
+
+type GetProps = [
+  url: string,
+  responseType: FetchResponseType,
+  retries: number,
+  retryDelayMs: number,
+  noLogs: boolean,
+  retryAttempts: number,
+];
+
+type PostProps = [
+  url: string,
+  data: ArrayBuffer | string,
+  contentType: string,
+  responseType: FetchResponseType,
+  retries: number,
+  retryDelayMs: number,
+  noLogs: boolean,
+  retryAttempts: number,
+];
+
+type ArDriveHTTPResponse = {
+  statusCode: number;
+  statusMessage: string;
+  data: object | string | BinaryData;
+  retryAttempts: number;
+};
+
+type ArDriveHTTPException = {
+  error: string;
+  retryAttempts: number;
+};
 
 // Utilities
 let retryStatusCodes = [408, 429, 440, 460, 499, 500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 527, 598, 599];
+
+const isStatusCodeError = (code: number): boolean => code >= 400 && code <= 599;
 
 const retryDelay = (attempt: number, retryDelayMs: number): number => retryDelayMs * Math.pow(1.5, attempt);
 
@@ -25,65 +59,121 @@ const logger = {
   },
 };
 
-// Types
-type GetProps = [
-  url: string,
-  responseType: 'text' | 'json' | 'arraybuffer' | 'stream',
-  retries: number,
-  retryDelayMs: number,
-  noLogs: boolean,
-];
-
-type PostBytesProps = [url: string, dataBytes: ArrayBuffer, retries: number, retryDelayMs: number, noLogs: boolean];
-
-type ArDriveHTTPResponse = {
-  statusCode: number;
-  statusMessage: string;
-  data: object | string | BinaryData;
-  retryAttempts: number;
+const requestType = {
+  json: {
+    contentType: 'application/json; charset=utf-8',
+    getResponse: async (response: Response) => await response.json(),
+  },
+  bytes: {
+    contentType: 'application/octet-stream',
+    getResponse: async (response: Response) => await response.arrayBuffer(),
+  },
+  text: {
+    contentType: 'plain/text; charset=utf-8',
+    getResponse: async (response: Response) => await response.text(),
+  },
 };
 
-type ArDriveHTTPException = {
-  error: string;
-  retryAttempts: number;
-};
-
-const axiosClient = axios.create();
-
-const get = async ([url, responseType, retries, retryDelayMs, noLogs = false]: GetProps): Promise<
+const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, retryAttempts = 0]: GetProps): Promise<
   ArDriveHTTPResponse | ArDriveHTTPException
 > => {
-  axiosRetry(axiosClient, {
-    retries,
-    retryDelay: (retryCount: number) => retryDelay(retryCount, retryDelayMs),
-    retryCondition: (error: AxiosError) => {
-      const status = error.response?.status ?? 0;
-      return retryStatusCodes.includes(status);
-    },
-    onRetry: (count, error) => {
-      if (!noLogs) {
-        logger.retry(url, error.response?.status || 0, error.response?.statusText || '', count);
-      }
-    },
-  });
-
   try {
-    const response = await axiosClient.get(url, {
-      responseType: responseType,
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
     });
 
+    const statusCode = response.status;
+    const statusMessage = response.statusText;
+
+    if (retries > 0 && retryStatusCodes.includes(statusCode)) {
+      if (!noLogs) {
+        logger.retry(url, statusCode, statusMessage, retryAttempts);
+      }
+
+      return await get([url, responseType, retries - 1, retryDelayMs, noLogs, retryAttempts + 1]);
+    } else {
+      if (isStatusCodeError(statusCode)) {
+        const log = logMessage(url, statusCode, statusMessage, retryAttempts);
+
+        return {
+          error: `Network Request Error\n${log}`,
+          retryAttempts,
+        };
+      }
+    }
+
+    const data = await requestType[`${responseType}`].getResponse(response);
+
     return {
-      statusCode: response.status,
-      statusMessage: response.statusText,
-      data: response.data,
-      retryAttempts: response.config['axios-retry']?.retryCount,
+      statusCode,
+      statusMessage,
+      data,
+      retryAttempts,
     };
   } catch (error: any) {
     return {
       error: `${error}`,
-      retryAttempts: error.response.config['axios-retry'].retryCount,
+      retryAttempts,
+    };
+  }
+};
+
+const post = async ([
+  url,
+  data,
+  contentType,
+  responseType,
+  retries,
+  retryDelayMs,
+  noLogs = false,
+  retryAttempts = 0,
+]: PostProps): Promise<ArDriveHTTPResponse | ArDriveHTTPException> => {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...(contentType !== requestType.text.contentType ? { 'Content-Type': contentType } : {}),
+      },
+      redirect: 'follow',
+      body: data,
+    });
+
+    const statusCode = response.status;
+    const statusMessage = response.statusText;
+
+    if (retries > 0 && retryStatusCodes.includes(statusCode)) {
+      if (!noLogs) {
+        logger.retry(url, statusCode, statusMessage, retryAttempts);
+      }
+
+      return await post([url, data, contentType, responseType, retries - 1, retryDelayMs, noLogs, retryAttempts + 1]);
+    } else {
+      if (isStatusCodeError(statusCode)) {
+        const log = logMessage(url, statusCode, statusMessage, retryAttempts);
+
+        return {
+          error: `Network Request Error\n${log}`,
+          retryAttempts,
+        };
+      }
+    }
+
+    const responseBody = await requestType[`${responseType}`].getResponse(response);
+
+    return {
+      statusCode,
+      statusMessage,
+      data: responseBody,
+      retryAttempts,
+    };
+  } catch (error: any) {
+    return {
+      error: `${error}`,
+      retryAttempts,
     };
   }
 };
 
 window.get = get;
+window.post = post;

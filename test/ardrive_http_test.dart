@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:ardrive_http/ardrive_http.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -22,7 +25,7 @@ void main() {
 
     group('get method', () {
       test('returns plain response data', () async {
-        const String url = '$baseUrl/getText';
+        const String url = '$baseUrl/ok';
         final response = await http.get(url: url);
 
         expect(response.data, 'ok');
@@ -45,7 +48,7 @@ void main() {
       });
 
       test('returns byte response', () async {
-        const String url = '$baseUrl/getText';
+        const String url = '$baseUrl/ok';
 
         final getResponse =
             await http.get(url: url, responseType: ResponseType.bytes);
@@ -109,23 +112,27 @@ void main() {
       });
     });
 
-    group('postBytes method', () {
+    group('post method', () {
       test('accepts data and sends ok', () async {
-        const String url = '$baseUrl/postBytes';
+        const String url = '$baseUrl/ok';
         final response = await http.postBytes(
           url: url,
-          dataBytes: Uint8List(10),
+          data: Uint8List(1),
+          responseType: ResponseType.plain,
         );
 
-        expect(response.data['message'], 'ok');
+        expect(response.data, 'ok');
         expect(response.retryAttempts, 0);
-      }, onPlatform: {'browser': const Skip('Not yet supported on browsers.')});
+      });
 
       test('fail without retry', () async {
         const String url = '$baseUrl/404';
 
         await expectLater(
-          () => http.postBytes(url: url, dataBytes: Uint8List(10)),
+          () => http.postBytes(
+            url: url,
+            data: Uint8List(10),
+          ),
           throwsA(
             const ArDriveHTTPException(
               retryAttempts: 0,
@@ -133,14 +140,18 @@ void main() {
             ),
           ),
         );
-      }, onPlatform: {'browser': const Skip('Not yet supported on browsers.')});
+      });
 
       for (int statusCode in retryStatusCodes) {
         test('retry 8 times by default when response is $statusCode', () async {
           final url = '$baseUrl/$statusCode';
 
           await expectLater(
-            () => http.postBytes(url: url, dataBytes: Uint8List(10)),
+            () => http.post(
+              url: url,
+              data: 'la',
+              contentType: ContentType.text,
+            ),
             throwsA(
               const ArDriveHTTPException(
                 retryAttempts: 8,
@@ -148,8 +159,6 @@ void main() {
               ),
             ),
           );
-        }, onPlatform: {
-          'browser': const Skip('Not yet supported on browsers.')
         });
       }
 
@@ -163,7 +172,11 @@ void main() {
         const String url = '$baseUrl/429';
 
         await expectLater(
-          () => http.postBytes(url: url, dataBytes: Uint8List(10)),
+          () => http.postJson(
+            url: url,
+            data: const JsonEncoder.withIndent(' ').convert({'test': true}),
+            responseType: ResponseType.plain,
+          ),
           throwsA(
             const ArDriveHTTPException(
               retryAttempts: 4,

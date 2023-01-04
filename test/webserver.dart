@@ -26,91 +26,84 @@ List<int> retryStatusCodes = [
   599
 ];
 
+const Map<String, Object> headers = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
+  'access-control-allow-headers': 'content-type',
+  'allow': '*',
+};
+
 Future<void> main() async {
-  Router app = Router();
+  Router router = Router();
 
   final server = await shelf_io.serve(
-    app,
-    InternetAddress.anyIPv4, // Allows external connections
+    router,
+    InternetAddress.anyIPv4,
     8080,
   );
 
-  app.get(
+  router.all(
     '/getJson',
     (Request request) => Response.ok(
       const JsonEncoder.withIndent(' ').convert({'message': 'ok'}),
       headers: {
-        'content-type': 'application/json',
-        'access-control-allow-origin': '*',
+        ...headers,
+        'Content-Type': 'application/json',
       },
     ),
   );
 
-  app.get(
-    '/getText',
+  router.all(
+    '/ok',
     (Request request) => Response.ok(
       'ok',
-      headers: {
-        'access-control-allow-origin': '*',
-      },
+      headers: headers,
     ),
   );
 
   for (int statusCode in retryStatusCodes) {
-    app.get(
+    router.options(
       '/$statusCode',
-      (Request request) => Response(
-        statusCode,
-        headers: {
-          'access-control-allow-origin': '*',
-        },
+      (Request request) => Response.ok(
+        null,
+        headers: headers,
       ),
     );
 
-    app.post(
+    router.get(
       '/$statusCode',
       (Request request) => Response(
         statusCode,
-        headers: {
-          'access-control-allow-origin': '*',
-        },
+        headers: headers,
+      ),
+    );
+
+    router.post(
+      '/$statusCode',
+      (Request request) => Response(
+        statusCode,
+        headers: headers,
       ),
     );
   }
 
-  app.get(
+  router.all(
     '/404',
-    (Request request) => Response(404, headers: {
-      'access-control-allow-origin': '*',
-    }),
+    (Request request) => Response(
+      404,
+      headers: headers,
+    ),
   );
 
-  app.post(
-    '/404',
-    (Request request) => Response(404, headers: {
-      'access-control-allow-origin': '*',
-    }),
-  );
-
-  app.get(
+  router.get(
     '/exit',
     (Request request) {
       server.close();
-      return Response(200, headers: {
-        'access-control-allow-origin': '*',
-      });
+      return Response.ok(
+        null,
+        headers: headers,
+      );
     },
-  );
-
-  app.post(
-    '/postBytes',
-    (Request request) => Response.ok(
-      const JsonEncoder.withIndent(' ').convert({'message': 'ok'}),
-      headers: {
-        'content-type': 'application/json',
-        'access-control-allow-origin': '*',
-      },
-    ),
   );
 
   // ignore: avoid_print

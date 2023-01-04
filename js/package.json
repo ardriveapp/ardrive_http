@@ -26,9 +26,5 @@
     "minifyIdentifiers": false,
     "minifyWhitespace": true,
     "minifySyntax": true
-  },
-  "dependencies": {
-    "axios": "^1.2.2",
-    "axios-retry": "^3.3.1"
   }
 }
