@@ -1,0 +1,30 @@
+{
+  "name": "js",
+  "packageManager": "yarn@3.3.1",
+  "devDependencies": {
+    "tsup": "^6.5.0",
+    "typescript": "^4.9.4"
+  },
+  "scripts": {
+    "build": "tsup",
+    "watch": "tsup --watch"
+  },
+  "tsup": {
+    "entry": [
+      "src/ardrive-http.ts"
+    ],
+    "splitting": false,
+    "sourcemap": false,
+    "clean": false,
+    "noExternal": [
+      "axios",
+      "axios-retry"
+    ],
+    "platform": "browser",
+    "treeshake": true,
+    "outDir": "dist",
+    "minifyIdentifiers": false,
+    "minifyWhitespace": true,
+    "minifySyntax": true
+  }
+}
