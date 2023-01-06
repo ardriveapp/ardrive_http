@@ -1,1 +1,1 @@
-../lib/src/js/ardrive-http.js
+../js/dist/ardrive-http.js

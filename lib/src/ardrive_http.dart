@@ -1,15 +1,29 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:ardrive_http/src/responses.dart';
-import 'package:ardrive_http/src/utils.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isolated_worker/js_isolated_worker.dart';
 
 const List<String> jsScriptsToImport = <String>['ardrive-http.js'];
+
+String normalizeResponseTypeToJS(ResponseType responseType) {
+  switch (responseType) {
+    case ResponseType.bytes:
+      return 'bytes';
+    case ResponseType.plain:
+      return 'text';
+    case ResponseType.json:
+      return 'json';
+
+    default:
+      return responseType.toString().split('.')[1];
+  }
+}
 
 class ArDriveHTTP {
   int retries;
@@ -23,7 +37,7 @@ class ArDriveHTTP {
     this.noLogs = false,
   });
 
-  Dio dio() {
+  Dio _dio() {
     final dio = Dio();
 
     if (!noLogs) {
@@ -38,24 +52,19 @@ class ArDriveHTTP {
   }
 
   // get method
-  // in the case where isJson and asBytes is false it will return a text response
   Future<ArDriveHTTPResponse> get({
     required String url,
-    bool isJson = false,
-    bool asBytes = false,
+    ResponseType responseType = ResponseType.plain,
   }) async {
-    checkIsJsonAndAsBytesParams(isJson, asBytes);
-
     final Map getIOParams = <String, dynamic>{};
     getIOParams['url'] = url;
-    getIOParams['asBytes'] = asBytes;
+    getIOParams['responseType'] = responseType;
 
     if (kIsWeb) {
       if (await _loadWebWorkers()) {
         return await _getWeb(
           url: url,
-          isJson: isJson,
-          asBytes: asBytes,
+          responseType: responseType,
         );
       } else {
         return await _getIO(getIOParams);
@@ -66,27 +75,22 @@ class ArDriveHTTP {
   }
 
   Future<ArDriveHTTPResponse> getJson(String url) async {
-    return get(url: url, isJson: true);
+    return get(url: url, responseType: ResponseType.json);
   }
 
   Future<ArDriveHTTPResponse> getAsBytes(String url) async {
-    return get(url: url, asBytes: true);
+    return get(url: url, responseType: ResponseType.bytes);
   }
 
   Future<ArDriveHTTPResponse> _getIO(Map params) async {
     final String url = params['url'];
-    final bool asBytes = params['asBytes'];
+    final ResponseType responseType = params['responseType'];
 
     try {
-      Response response;
-      if (asBytes) {
-        response = await dio().get<List<int>>(
-          url,
-          options: Options(responseType: ResponseType.bytes),
-        );
-      } else {
-        response = await dio().get(url);
-      }
+      Response response = await _dio().get(
+        url,
+        options: Options(responseType: responseType),
+      );
 
       return ArDriveHTTPResponse(
         data: response.data,
@@ -104,8 +108,7 @@ class ArDriveHTTP {
 
   Future<ArDriveHTTPResponse> _getWeb({
     required String url,
-    required bool isJson,
-    required bool asBytes,
+    required ResponseType responseType,
   }) async {
     try {
       final LinkedHashMap<dynamic, dynamic> response =
@@ -113,8 +116,7 @@ class ArDriveHTTP {
         functionName: 'get',
         arguments: [
           url,
-          isJson,
-          asBytes,
+          normalizeResponseTypeToJS(responseType),
           retries,
           retryDelayMs,
           noLogs,
@@ -128,7 +130,137 @@ class ArDriveHTTP {
       }
 
       return ArDriveHTTPResponse(
-        data: asBytes ? Uint8List.view(response['data']) : response['data'],
+        data: responseType == ResponseType.bytes
+            ? Uint8List.view(response['data'])
+            : response['data'],
+        statusCode: response['statusCode'],
+        statusMessage: response['statusMessage'],
+        retryAttempts: response['retryAttempts'],
+      );
+    } catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        dioException: error,
+      );
+    }
+  }
+
+  Future<ArDriveHTTPResponse> post({
+    required String url,
+    required dynamic data,
+    required ContentType contentType,
+    ResponseType responseType = ResponseType.plain,
+  }) async {
+    final Map postIOParams = <String, dynamic>{};
+    postIOParams['url'] = url;
+    postIOParams['data'] = data;
+    postIOParams['contentType'] = contentType;
+    postIOParams['responseType'] = responseType;
+    if (kIsWeb) {
+      if (await _loadWebWorkers()) {
+        return await _postWeb(
+          url: url,
+          data: data,
+          contentType: contentType.toString(),
+          responseType: responseType,
+        );
+      } else {
+        return await _postIO(postIOParams);
+      }
+    }
+
+    return await compute(_postIO, postIOParams);
+  }
+
+  Future<ArDriveHTTPResponse> postJson({
+    required String url,
+    required String data,
+    ResponseType responseType = ResponseType.json,
+  }) async {
+    return post(
+      url: url,
+      data: data,
+      contentType: ContentType.json,
+      responseType: responseType,
+    );
+  }
+
+  Future<ArDriveHTTPResponse> postBytes({
+    required String url,
+    required Uint8List data,
+    ResponseType responseType = ResponseType.json,
+  }) async {
+    return post(
+      url: url,
+      data: data,
+      contentType: ContentType.binary,
+      responseType: responseType,
+    );
+  }
+
+  Future<ArDriveHTTPResponse> _postIO(Map params) async {
+    final String url = params['url'];
+    final dynamic data = params['data'];
+    final ContentType contentType = params['contentType'];
+    final ResponseType responseType = params['responseType'];
+
+    try {
+      Response response = await _dio().post(
+        url,
+        data: contentType == ContentType.binary
+            ? Stream.fromIterable([data])
+            : data,
+        options: Options(
+          contentType: contentType.toString(),
+          responseType: responseType,
+        ),
+      );
+
+      return ArDriveHTTPResponse(
+        data: response.data,
+        statusCode: response.statusCode,
+        statusMessage: response.statusMessage,
+        retryAttempts: retryAttempts,
+      );
+    } catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        dioException: error,
+      );
+    }
+  }
+
+  Future<ArDriveHTTPResponse> _postWeb({
+    required String url,
+    required dynamic data,
+    required String contentType,
+    required ResponseType responseType,
+  }) async {
+    try {
+      final LinkedHashMap<dynamic, dynamic> response =
+          await JsIsolatedWorker().run(
+        functionName: 'post',
+        arguments: [
+          url,
+          data,
+          contentType,
+          normalizeResponseTypeToJS(responseType),
+          retries,
+          retryDelayMs,
+          noLogs,
+        ],
+      );
+
+      if (response['error'] != null) {
+        retryAttempts = response['retryAttempts'];
+
+        throw response['error'];
+      }
+
+      return ArDriveHTTPResponse(
+        data: responseType == ResponseType.bytes
+            ? Uint8List.view(response['data'])
+            : response['data'],
         statusCode: response['statusCode'],
         statusMessage: response['statusMessage'],
         retryAttempts: response['retryAttempts'],

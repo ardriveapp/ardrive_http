@@ -4,7 +4,7 @@ version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: ">=2.18.5 <3.0.0"
+  sdk: '>=2.18.5 <3.0.0'
   flutter: 3.3.9
 
 script_runner:
@@ -16,9 +16,9 @@ script_runner:
   line_length: 80
   scripts:
     - webserver: dart run test/webserver.dart
-    - test-web: flutter test --platform chrome
-    - test-vm: flutter test
-    - test: scr webserver & sleep 10 && scr test-vm && scr webserver & sleep 10 && scr test-web
+    - test-web: scr webserver & sleep 10 && flutter test --platform chrome
+    - test-vm: scr webserver & sleep 10 && flutter test
+    - test: scr test-vm && scr test-web
 
 dependencies:
   dio: ^4.0.6
