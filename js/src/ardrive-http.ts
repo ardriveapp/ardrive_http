@@ -81,6 +81,7 @@ const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, re
     const response = await fetch(url, {
       method: 'GET',
       redirect: 'follow',
+      signal: AbortSignal.timeout(8000), // 8s timeout
     });
 
     const statusCode = response.status;
@@ -137,6 +138,7 @@ const post = async ([
       },
       redirect: 'follow',
       body: data,
+      signal: AbortSignal.timeout(8000), // 8s timeout
     });
 
     const statusCode = response.status;
