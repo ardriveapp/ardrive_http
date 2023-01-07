@@ -39,6 +39,8 @@ class ArDriveHTTP {
 
   Dio _dio() {
     final dio = Dio();
+    dio.options.connectTimeout = 8000; // 8s
+    dio.options.receiveTimeout = 5000; // 5s
 
     if (!noLogs) {
       dio.interceptors.add(LogInterceptor());
