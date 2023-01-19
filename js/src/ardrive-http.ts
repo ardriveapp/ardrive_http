@@ -177,5 +177,5 @@ const post = async ([
   }
 };
 
-window.get = get;
-window.post = post;
+self.get = get;
+self.post = post;
