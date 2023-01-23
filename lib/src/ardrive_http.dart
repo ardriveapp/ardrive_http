@@ -212,7 +212,7 @@ class ArDriveHTTP {
       Response response = await _dio()
           .post(
             url,
-            data: Stream.fromIterable([data]),
+            data: data,
             options: Options(
               contentType: contentType.toString(),
               responseType: responseType,
