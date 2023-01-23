@@ -7,6 +7,7 @@ import 'package:ardrive_http/src/responses.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:isolated_worker/js_isolated_worker.dart';
 
 const List<String> jsScriptsToImport = <String>['ardrive-http.js'];
@@ -209,23 +210,24 @@ class ArDriveHTTP {
     final ResponseType responseType = params['responseType'];
 
     try {
-      Response response = await _dio()
+      var response = await http
           .post(
-            url,
-            data: Stream.fromIterable(data.map((e) => [e])),
-            options: Options(
-              contentType: contentType.toString(),
-              responseType: responseType,
-            ),
+            Uri.parse(url),
+            headers: {
+              'Content-Type': contentType.value,
+              'Accept': "*/*",
+              'Connection': 'keep-alive',
+            },
+            body: data,
           )
           .timeout(
-            const Duration(seconds: 8), // 8s timeout
+            const Duration(seconds: 8),
           );
 
       return ArDriveHTTPResponse(
-        data: response.data,
+        data: response.body,
         statusCode: response.statusCode,
-        statusMessage: response.statusMessage,
+        statusMessage: response.reasonPhrase,
         retryAttempts: retryAttempts,
       );
     } catch (error) {

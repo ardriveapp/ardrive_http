@@ -26,6 +26,7 @@ dependencies:
   equatable: ^2.0.5
   flutter:
     sdk: flutter
+  http: ^0.13.5
   isolated_worker: ^0.1.1
   shelf: ^1.4.0
   shelf_router: ^1.1.3
