@@ -216,6 +216,7 @@ class ArDriveHTTP {
                 ? Stream.fromIterable([data])
                 : data,
             options: Options(
+              requestEncoder: (_, __) => data,
               contentType: contentType.toString(),
               responseType: responseType,
             ),
