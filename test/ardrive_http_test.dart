@@ -62,6 +62,45 @@ void main() {
         expect(getAsBytesResponse.retryAttempts, 0);
       });
 
+      test('returns byte range response', () async {
+        const String url = 'https://arweave.net/';
+
+        final getResponse =
+            await http.get(url: url, responseType: ResponseType.bytes, byteRange: ByteRange(0, 0));
+
+        expect(getResponse.data, Uint8List.fromList([123]));
+        expect(getResponse.retryAttempts, 0);
+
+        final getAsBytesResponse = await http.getAsBytes(url, ByteRange(1, 1));
+
+        expect(getAsBytesResponse.data, Uint8List.fromList([34]));
+        expect(getAsBytesResponse.retryAttempts, 0);
+      });
+
+      test('returns byte range stream response', () async {
+        const String url = 'https://arweave.net/';
+
+        final getAsBytesResponse = http.getAsByteRangeStream(url, 2, chunkSize: 1);
+
+        respDataEquals(ArDriveHTTPResponse r, Uint8List test) {
+          final data = r.data as Uint8List;
+          return data.length == test.length && data.every((e) => test.contains(e));
+        }
+
+        expect(
+          getAsBytesResponse,
+          emitsInOrder([
+            emits(predicate(
+              (ArDriveHTTPResponse r) => respDataEquals(r, Uint8List.fromList([123]))
+            )),
+            emits(predicate(
+              (ArDriveHTTPResponse r) => respDataEquals(r, Uint8List.fromList([34]))
+            )),
+            emitsDone,
+          ]),
+        );
+      });
+
       test('fail without retry', () async {
         const String url = '$baseUrl/404';
 

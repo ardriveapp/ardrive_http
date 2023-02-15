@@ -9,6 +9,18 @@ import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isolated_worker/js_isolated_worker.dart';
 
+const int defaultStreamChunkSize = 1 * 1024 * 1024; // 1 MiB
+
+class ByteRange {
+  final int start;
+  final int end;
+
+  ByteRange(this.start, this.end);
+
+  @override
+  String toString() => 'bytes=$start-$end';
+}
+
 const List<String> jsScriptsToImport = <String>['ardrive-http.js'];
 
 String normalizeResponseTypeToJS(ResponseType responseType) {
@@ -55,10 +67,14 @@ class ArDriveHTTP {
   Future<ArDriveHTTPResponse> get({
     required String url,
     ResponseType responseType = ResponseType.plain,
+    ByteRange? byteRange,
   }) async {
     final Map getIOParams = <String, dynamic>{};
     getIOParams['url'] = url;
     getIOParams['responseType'] = responseType;
+    if (byteRange != null) {
+      getIOParams['byteRange'] = byteRange;
+    }
 
     if (kIsWeb) {
       if (await _loadWebWorkers()) {
@@ -78,19 +94,40 @@ class ArDriveHTTP {
     return get(url: url, responseType: ResponseType.json);
   }
 
-  Future<ArDriveHTTPResponse> getAsBytes(String url) async {
-    return get(url: url, responseType: ResponseType.bytes);
+  Future<ArDriveHTTPResponse> getAsBytes(String url, [ByteRange? byteRange]) async {
+    return get(url: url, responseType: ResponseType.bytes, byteRange: byteRange);
+  }
+
+  Stream<ArDriveHTTPResponse> getAsByteRangeStream(String url, int sizeBytes, {int chunkSize=defaultStreamChunkSize}) async* {
+    chunkEnd(int s) => min(s + chunkSize, sizeBytes) - 1;
+    
+    int start = 0;
+    int end = chunkEnd(0);
+
+    while (start < sizeBytes) {
+      yield await getAsBytes(url, ByteRange(start, end));
+
+      start += chunkSize;
+      end = chunkEnd(start);
+    }
   }
 
   Future<ArDriveHTTPResponse> _getIO(Map params) async {
     final String url = params['url'];
     final ResponseType responseType = params['responseType'];
+    final ByteRange? byteRange = params['byteRange'];
 
     try {
+      final headers = byteRange != null
+        ? { 'Range': byteRange.toString() }
+        : null;
       Response response = await _dio()
           .get(
             url,
-            options: Options(responseType: responseType),
+            options: Options(
+              responseType: responseType,
+              headers: headers,
+            ),
           )
           .timeout(
             const Duration(seconds: 8), // 8s timeout
