@@ -15,13 +15,10 @@ type GetProps = [
   retryDelayMs: number,
   noLogs: boolean,
   retryAttempts: number,
-  range?: ByteRange,
+  useByteRange: boolean,
+  byteRangeStart: number,
+  byteRangeEnd: number,
 ];
-
-type ByteRange = {
-  start: number,
-  end: number,
-};
 
 type PostProps = [
   url: string,
@@ -87,14 +84,24 @@ const requestType: Record<FetchResponseType, FetchResponseDetails> = {
   },
 };
 
-const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, retryAttempts = 0, byteRange]: GetProps): Promise<
+const get = async ([
+  url,
+  responseType,
+  retries,
+  retryDelayMs,
+  noLogs = false,
+  retryAttempts = 0,
+  useByteRange,
+  byteRangeStart,
+  byteRangeEnd
+]: GetProps): Promise<
   ArDriveHTTPResponse | ArDriveHTTPException
 > => {
   try {
-    const headers = byteRange 
-      ? new Headers({
-        Range: `bytes=${byteRange.start}-${byteRange.end}`,
-      })
+    const headers = useByteRange 
+      ? {
+        Range: `bytes=${byteRangeStart}-${byteRangeEnd}`,
+      }
       : undefined;
     const response = await fetch(url, {
       method: 'GET',
@@ -111,7 +118,17 @@ const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, re
         logger.retry(url, statusCode, statusMessage, retryAttempts);
       }
 
-      return await get([url, responseType, retries - 1, retryDelayMs, noLogs, retryAttempts + 1]);
+      return await get([
+        url,
+        responseType,
+        retries - 1,
+        retryDelayMs,
+        noLogs,
+        retryAttempts + 1,
+        useByteRange,
+        byteRangeStart,
+        byteRangeEnd
+      ]);
     } else {
       if (isStatusCodeError(statusCode)) {
         const log = logMessage(url, statusCode, statusMessage, retryAttempts);

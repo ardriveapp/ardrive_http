@@ -81,6 +81,7 @@ class ArDriveHTTP {
         return await _getWeb(
           url: url,
           responseType: responseType,
+          byteRange: byteRange,
         );
       } else {
         return await _getIO(getIOParams);
@@ -150,22 +151,29 @@ class ArDriveHTTP {
   Future<ArDriveHTTPResponse> _getWeb({
     required String url,
     required ResponseType responseType,
+    ByteRange? byteRange,
   }) async {
+    var localRetryAttempts = retryAttempts;
     try {
+      final arguments = [
+        url,
+        normalizeResponseTypeToJS(responseType),
+        retries,
+        retryDelayMs,
+        noLogs,
+        localRetryAttempts,
+        byteRange != null,
+        byteRange?.start,
+        byteRange?.end,
+      ];
       final LinkedHashMap<dynamic, dynamic> response =
           await JsIsolatedWorker().run(
         functionName: 'get',
-        arguments: [
-          url,
-          normalizeResponseTypeToJS(responseType),
-          retries,
-          retryDelayMs,
-          noLogs,
-        ],
+        arguments: arguments,
       );
 
       if (response['error'] != null) {
-        retryAttempts = response['retryAttempts'];
+        localRetryAttempts = response['retryAttempts'];
 
         throw response['error'];
       }
@@ -180,7 +188,7 @@ class ArDriveHTTP {
       );
     } catch (error) {
       throw ArDriveHTTPException(
-        retryAttempts: retryAttempts,
+        retryAttempts: localRetryAttempts,
         dioException: error,
       );
     }
