@@ -1,6 +1,13 @@
 // Types
 type FetchResponseType = 'text' | 'json' | 'bytes';
 
+type FetchResponseData = object | string | BinaryData;
+
+type FetchResponseDetails = {
+  contentType: string,
+  getResponse: (response: Response) => Promise<FetchResponseData>,
+};
+
 type GetProps = [
   url: string,
   responseType: FetchResponseType,
@@ -24,7 +31,7 @@ type PostProps = [
 type ArDriveHTTPResponse = {
   statusCode: number;
   statusMessage: string;
-  data: object | string | BinaryData;
+  data: FetchResponseData;
   retryAttempts: number;
 };
 
@@ -59,7 +66,7 @@ const logger = {
   },
 };
 
-const requestType = {
+const requestType: Record<FetchResponseType, FetchResponseDetails> = {
   json: {
     contentType: 'application/json; charset=utf-8',
     getResponse: async (response: Response) => await response.json(),
