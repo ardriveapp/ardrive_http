@@ -112,6 +112,10 @@ const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, re
       retryAttempts,
     };
   } catch (error: any) {
+    // print error and stacktrace
+    console.error(error);
+    console.error(error.stack);
+
     return {
       error: `${error}`,
       retryAttempts,
