@@ -13,6 +13,7 @@ ArDriveHTTP is a package to perform network calls for ArDrive Web. It uses Isola
 - get()
 - getJson()
 - getAsBytes()
+- getAsByteRangeStream() [via HTTP ranges]
 
 ## Getting started
 
