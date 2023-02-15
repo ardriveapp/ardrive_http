@@ -81,7 +81,6 @@ const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, re
     const response = await fetch(url, {
       method: 'GET',
       redirect: 'follow',
-      signal: AbortSignal.timeout(8000), // 8s timeout
     });
 
     const statusCode = response.status;
@@ -113,6 +112,10 @@ const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, re
       retryAttempts,
     };
   } catch (error: any) {
+    // print error and stacktrace
+    console.error(error);
+    console.error(error.stack);
+
     return {
       error: `${error}`,
       retryAttempts,
@@ -138,7 +141,6 @@ const post = async ([
       },
       redirect: 'follow',
       body: data,
-      signal: AbortSignal.timeout(8000), // 8s timeout
     });
 
     const statusCode = response.status;
