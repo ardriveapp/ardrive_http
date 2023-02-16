@@ -34,19 +34,19 @@ type ArDriveHTTPException = {
 };
 
 // Utilities
-let retryStatusCodes = [408, 429, 440, 460, 499, 500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 527, 598, 599];
+var retryStatusCodes = [408, 429, 440, 460, 499, 500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 527, 598, 599];
 
-const isStatusCodeError = (code: number): boolean => code >= 400 && code <= 599;
+var isStatusCodeError = (code: number): boolean => code >= 400 && code <= 599;
 
-const retryDelay = (attempt: number, retryDelayMs: number): number => retryDelayMs * Math.pow(1.5, attempt);
+var retryDelay = (attempt: number, retryDelayMs: number): number => retryDelayMs * Math.pow(1.5, attempt);
 
-const logMessage = (url: string, statusCode: number, statusMessage: string, retryAttempts: number): string => {
+var logMessage = (url: string, statusCode: number, statusMessage: string, retryAttempts: number): string => {
   return `uri: ${url}
   response: Http status error [${statusCode}]: ${statusMessage}
   retryAttempts: ${retryAttempts}`;
 };
 
-const logger = {
+var logger = {
   retry: (url: string, statusCode: number, statusMesage: string, retryAttempts: number): void => {
     const standardMessage = logMessage(url, statusCode, statusMesage, retryAttempts);
 
@@ -59,7 +59,7 @@ const logger = {
   },
 };
 
-const requestType = {
+var requestType = {
   json: {
     contentType: 'application/json; charset=utf-8',
     getResponse: async (response: Response) => await response.json(),
@@ -74,14 +74,18 @@ const requestType = {
   },
 };
 
-const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, retryAttempts = 0]: GetProps): Promise<
+var get = async ([url, responseType, retries, retryDelayMs, noLogs = false, retryAttempts = 0]: GetProps): Promise<
   ArDriveHTTPResponse | ArDriveHTTPException
 > => {
   try {
+    const controller = new AbortController();
+    const responseTimeout = setTimeout(() => controller.abort(), 8000); // 8s
     const response = await fetch(url, {
       method: 'GET',
       redirect: 'follow',
+      signal: controller.signal,
     });
+    clearTimeout(responseTimeout);
 
     const statusCode = response.status;
     const statusMessage = response.statusText;
@@ -123,7 +127,7 @@ const get = async ([url, responseType, retries, retryDelayMs, noLogs = false, re
   }
 };
 
-const post = async ([
+var post = async ([
   url,
   data,
   contentType,
@@ -134,6 +138,8 @@ const post = async ([
   retryAttempts = 0,
 ]: PostProps): Promise<ArDriveHTTPResponse | ArDriveHTTPException> => {
   try {
+    const controller = new AbortController();
+    const responseTimeout = setTimeout(() => controller.abort(), 8000); // 8s
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -141,7 +147,9 @@ const post = async ([
       },
       redirect: 'follow',
       body: data,
+      signal: controller.signal,
     });
+    clearTimeout(responseTimeout);
 
     const statusCode = response.status;
     const statusMessage = response.statusText;
