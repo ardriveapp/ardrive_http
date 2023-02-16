@@ -91,9 +91,6 @@ class ArDriveHTTP {
           .get(
             url,
             options: Options(responseType: responseType),
-          )
-          .timeout(
-            const Duration(seconds: 8), // 8s timeout
           );
 
       return ArDriveHTTPResponse(
@@ -220,9 +217,6 @@ class ArDriveHTTP {
               contentType: contentType.toString(),
               responseType: responseType,
             ),
-          )
-          .timeout(
-            const Duration(seconds: 8), // 8s timeout
           );
 
       return ArDriveHTTPResponse(
