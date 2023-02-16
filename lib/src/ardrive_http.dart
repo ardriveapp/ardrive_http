@@ -38,7 +38,12 @@ class ArDriveHTTP {
   });
 
   Dio _dio() {
-    final dio = Dio();
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+      ),
+    );
 
     if (!noLogs) {
       dio.interceptors.add(LogInterceptor());
@@ -87,14 +92,10 @@ class ArDriveHTTP {
     final ResponseType responseType = params['responseType'];
 
     try {
-      Response response = await _dio()
-          .get(
-            url,
-            options: Options(responseType: responseType),
-          )
-          .timeout(
-            const Duration(seconds: 8), // 8s timeout
-          );
+      Response response = await _dio().get(
+        url,
+        options: Options(responseType: responseType),
+      );
 
       return ArDriveHTTPResponse(
         data: response.data,
