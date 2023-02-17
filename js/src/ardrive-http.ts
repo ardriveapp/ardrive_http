@@ -101,7 +101,7 @@ const get = async ([
     const headers = useByteRange 
       ? {
         'Range': `bytes=${byteRangeStart}-${byteRangeEnd}`,
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-store',
       }
       : undefined;
     const response = await fetch(url, {
