@@ -120,7 +120,10 @@ class ArDriveHTTP {
 
     try {
       final headers = byteRange != null
-        ? { 'Range': byteRange.toString() }
+        ? {
+            'Range': byteRange.toString(),
+            'Cache-Control': 'no-cache',
+          }
         : null;
       Response response = await _dio()
           .get(
