@@ -132,10 +132,10 @@ class ArDriveHTTP {
               responseType: responseType,
               headers: headers,
             ),
-          )
-          .timeout(
-            const Duration(seconds: 8), // 8s timeout
           );
+          // .timeout(
+          //   const Duration(seconds: 8), // 8s timeout
+          // );
 
       return ArDriveHTTPResponse(
         data: response.data,
