@@ -9,7 +9,7 @@ import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isolated_worker/js_isolated_worker.dart';
 
-const int defaultStreamChunkSize = 1 * 1024 * 1024; // 1 MiB
+const int defaultStreamChunkSize = 50 * 1024 * 1024; // 50 MiB
 
 class ByteRange {
   final int start;
@@ -99,13 +99,27 @@ class ArDriveHTTP {
     return get(url: url, responseType: ResponseType.bytes, byteRange: byteRange);
   }
 
-  Stream<ArDriveHTTPResponse> getAsByteRangeStream(String url, int sizeBytes, {int chunkSize=defaultStreamChunkSize}) async* {
+  Stream<ArDriveHTTPResponse> getAsByteRangeStream(
+    String url,
+    int sizeBytes, {
+    int chunkSize = defaultStreamChunkSize,
+    Completer<String>? cancelWithReason,
+    bool throwOnCancel = false,
+  }) async* {
     chunkEnd(int s) => min(s + chunkSize, sizeBytes) - 1;
     
     int start = 0;
     int end = chunkEnd(0);
 
     while (start < sizeBytes) {
+      if (cancelWithReason?.isCompleted == true) {
+        final reason = await cancelWithReason!.future;
+        debugPrint('HTTP ByteRangeStream cancelled, reason: $reason');
+        
+        if (throwOnCancel) throw Exception(reason);
+        break;
+      }
+
       yield await getAsBytes(url, ByteRange(start, end));
 
       start += chunkSize;
