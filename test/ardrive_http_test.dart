@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:ardrive_http/ardrive_http.dart';
+import 'package:async/async.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,16 @@ void main() {
 
         expect(getAsBytesResponse.data, Uint8List.fromList([111, 107]));
         expect(getAsBytesResponse.retryAttempts, 0);
+      });
+
+      test('returns byte stream response', () async {
+        const String url = '$baseUrl/ok';
+
+        final getResponse = await http.getAsByteStream(url);
+        final byteStream = getResponse.data as Stream<Uint8List>;
+
+        expect(collectBytes(byteStream), completion(Uint8List.fromList([111, 107])));
+        expect(getResponse.retryAttempts, 0);
       });
 
       test('fail without retry', () async {
