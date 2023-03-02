@@ -24,6 +24,7 @@ dependencies:
   dio: ^5.0.0
   dio_smart_retry: ^5.0.0
   equatable: ^2.0.5
+  fetch_client: ^1.0.0-dev.2
   flutter:
     sdk: flutter
   http: ^0.13.5

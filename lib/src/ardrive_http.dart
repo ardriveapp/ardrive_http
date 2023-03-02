@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:ardrive_http/src/responses.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
+import 'package:fetch_client/fetch_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:isolated_worker/js_isolated_worker.dart';
@@ -89,8 +90,13 @@ class ArDriveHTTP {
   }
 
   Future<ArDriveHTTPResponse> getAsByteStream(String url) async {
-    final client = http.Client();
-    final response = await client.send(http.Request('GET', Uri.parse(url)));
+    final client = kIsWeb? FetchClient() : http.Client();
+    final response = await client.send(
+      http.Request(
+        'GET', 
+        Uri.parse(url),
+      ),
+    );
     final byteStream = response.stream.map((event) => Uint8List.fromList(event));
     return ArDriveHTTPResponse(
       data: byteStream,
