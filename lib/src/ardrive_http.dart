@@ -6,10 +6,12 @@ import 'dart:math';
 import 'package:ardrive_http/src/responses.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
-import 'package:fetch_client/fetch_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:isolated_worker/js_isolated_worker.dart';
+
+import 'io/fetch_client_stub.dart'
+  if (dart.library.html) 'package:fetch_client/fetch_client.dart' as fetch;
 
 const List<String> jsScriptsToImport = <String>['ardrive-http.js'];
 
@@ -90,7 +92,9 @@ class ArDriveHTTP {
   }
 
   Future<ArDriveHTTPResponse> getAsByteStream(String url) async {
-    final client = kIsWeb? FetchClient() : http.Client();
+    final client = kIsWeb 
+      ? fetch.FetchClient(mode: fetch.RequestMode.cors)
+      : http.Client();
     final response = await client.send(
       http.Request(
         'GET', 
