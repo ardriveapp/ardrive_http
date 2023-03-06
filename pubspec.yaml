@@ -5,7 +5,7 @@ publish_to: none
 
 environment:
   sdk: '>=2.18.5 <3.0.0'
-  flutter: 3.3.9
+  flutter: 3.7.0
 
 script_runner:
   shell:
@@ -24,7 +24,7 @@ dependencies:
   dio: ^5.0.0
   dio_smart_retry: ^5.0.0
   equatable: ^2.0.5
-  fetch_client: ^1.0.0-dev.2
+  fetch_client: ^1.0.0
   flutter:
     sdk: flutter
   http: ^0.13.5
@@ -37,3 +37,11 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^2.0.1
   async: ^2.9.0
+
+# `fetch_api` from `fetch_client` specifies `js: ^0.6.7`, however
+# this is incompatible with `js: ^0.6.5` from Flutter SDK `3.7.0`
+# Issue: https://github.com/Zekfad/fetch_api/pull/2
+
+# Workaround: solves the dependency conflict by using the newer version.
+dependency_overrides:
+  js: ^0.6.7
