@@ -37,11 +37,3 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^2.0.1
   async: ^2.9.0
-
-# `fetch_api` from `fetch_client` specifies `js: ^0.6.7`, however
-# this is incompatible with `js: ^0.6.5` from Flutter SDK `3.7.0`
-# Issue: https://github.com/Zekfad/fetch_api/pull/2
-
-# Workaround: solves the dependency conflict by using the newer version.
-dependency_overrides:
-  js: ^0.6.7
