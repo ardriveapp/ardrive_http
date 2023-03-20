@@ -21,6 +21,15 @@ enum RequestMode {
   String toString() => mode;
 }
 
+class FetchResponse extends StreamedResponse {
+  FetchResponse(super.stream, super.statusCode, this.cancel, this.url, this.redirected);
+
+  final void Function() cancel;
+
+  final String url;
+
+  final bool redirected;
+}
 
 class FetchClient implements BaseClient {
   FetchClient({
@@ -30,7 +39,7 @@ class FetchClient implements BaseClient {
   }
 
   @override
-  Future<StreamedResponse> send(BaseRequest request) {
+  Future<FetchResponse> send(BaseRequest request) {
     throw UnimplementedError();
   }
 

@@ -91,16 +91,50 @@ class ArDriveHTTP {
     return get(url: url, responseType: ResponseType.bytes);
   }
 
-  Future<ArDriveHTTPResponse> getAsByteStream(String url) async {
-    final client = kIsWeb 
-      ? fetch.FetchClient(mode: fetch.RequestMode.cors)
-      : http.Client();
+  Future<ArDriveHTTPResponse> getAsByteStream(String url, {Completer<String>? cancelWithReason}) async {
+    return kIsWeb 
+      ? _getAsByteStreamWeb(url, cancelWithReason: cancelWithReason)
+      : _getAsByteStreamIO(url, cancelWithReason: cancelWithReason);
+  }
+
+  Future<ArDriveHTTPResponse> _getAsByteStreamWeb(String url, {Completer<String>? cancelWithReason}) async {
+    final client = fetch.FetchClient(mode: fetch.RequestMode.cors);
+    
     final response = await client.send(
       http.Request(
         'GET', 
         Uri.parse(url),
       ),
     );
+    
+    cancelWithReason?.future.then((value) {
+      debugPrint('Cancelling request to $url with reason: $value');
+      response.cancel();
+    });
+    
+    final byteStream = response.stream.map((event) => Uint8List.fromList(event));
+    return ArDriveHTTPResponse(
+      data: byteStream,
+      statusCode: response.statusCode,
+      statusMessage: response.reasonPhrase,
+      retryAttempts: retryAttempts,
+    );
+  }
+
+  Future<ArDriveHTTPResponse> _getAsByteStreamIO(String url, {Completer<String>? cancelWithReason}) async {
+    if (cancelWithReason != null) {
+      debugPrint('Warning: Canceling requests is not supported on the IO platform');
+    }
+    
+    final client = http.Client();
+
+    final response = await client.send(
+      http.Request(
+        'GET', 
+        Uri.parse(url),
+      ),
+    );
+    
     final byteStream = response.stream.map((event) => Uint8List.fromList(event));
     return ArDriveHTTPResponse(
       data: byteStream,
