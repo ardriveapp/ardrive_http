@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:ardrive_http/src/responses.dart';
+import 'package:cancellation_token_http/http.dart' as http_cancel;
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
@@ -122,18 +123,20 @@ class ArDriveHTTP {
   }
 
   Future<ArDriveHTTPResponse> _getAsByteStreamIO(String url, {Completer<String>? cancelWithReason}) async {
-    if (cancelWithReason != null) {
-      debugPrint('Warning: Canceling requests is not supported on the IO platform');
-    }
-    
-    final client = http.Client();
+    final client = http_cancel.Client();
+    final cancellationToken = http_cancel.CancellationToken();
 
     final response = await client.send(
-      http.Request(
+      http_cancel.Request(
         'GET', 
         Uri.parse(url),
       ),
     );
+    
+    cancelWithReason?.future.then((value) {
+      debugPrint('Cancelling request to $url with reason: $value');
+      cancellationToken.cancel();
+    });
     
     final byteStream = response.stream.map((event) => Uint8List.fromList(event));
     return ArDriveHTTPResponse(

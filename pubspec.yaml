@@ -21,6 +21,7 @@ script_runner:
     - test: scr test-vm && scr test-web
 
 dependencies:
+  cancellation_token_http: ^1.2.0
   dio: ^5.0.0
   dio_smart_retry: ^5.0.0
   equatable: ^2.0.5
