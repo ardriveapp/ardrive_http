@@ -131,6 +131,7 @@ class ArDriveHTTP {
         'GET', 
         Uri.parse(url),
       ),
+      cancellationToken: cancellationToken,
     );
     
     cancelWithReason?.future.then((value) {
