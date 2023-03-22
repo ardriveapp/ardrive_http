@@ -2,12 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:ardrive_http/ardrive_http.dart';
+import 'package:ardrive_http/src/utils.dart';
 import 'package:async/async.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import './webserver.dart';
 
 const String baseUrl = 'http://127.0.0.1:8080';
 
