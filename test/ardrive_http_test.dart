@@ -32,6 +32,14 @@ void main() {
         expect(response.retryAttempts, 0);
       });
 
+      test('header check', () async {
+        const String url = '$baseUrl/headerCheck';
+        final response = await http.get(url: url, headers: {'test': 'ok'});
+
+        expect(response.data, 'ok');
+        expect(response.retryAttempts, 0);
+      });
+
       test('returns decoded json response', () async {
         const String url = '$baseUrl/getJson';
 
@@ -119,6 +127,18 @@ void main() {
           url: url,
           data: Uint8List(1),
           responseType: ResponseType.plain,
+        );
+
+        expect(response.data, 'ok');
+        expect(response.retryAttempts, 0);
+      });
+
+      test('header check', () async {
+        const String url = '$baseUrl/headerCheck';
+        final response = await http.postBytes(
+          url: url,
+          headers: {'test': 'ok'},
+          data: Uint8List(10),
         );
 
         expect(response.data, 'ok');

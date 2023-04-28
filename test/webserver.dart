@@ -61,6 +61,23 @@ Future<void> main() async {
     ),
   );
 
+  router.all(
+    '/headerCheck',
+    (Request request) {
+      if (request.headers['test'] == 'ok') {
+        return Response.ok(
+          'ok',
+          headers: headers,
+        );
+      } else {
+        return Response(
+          400,
+          headers: headers,
+        );
+      }
+    },
+  );
+
   for (int statusCode in retryStatusCodes) {
     router.options(
       '/$statusCode',
