@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -126,7 +127,7 @@ class ArDriveHTTP {
         functionName: 'get',
         arguments: [
           url,
-          headers,
+          jsonEncode(headers),
           normalizeResponseTypeToJS(responseType),
           retries,
           retryDelayMs,
@@ -173,6 +174,7 @@ class ArDriveHTTP {
       if (await _loadWebWorkers()) {
         return await _postWeb(
           url: url,
+          headers: headers,
           data: data,
           contentType: contentType.toString(),
           responseType: responseType,
@@ -266,7 +268,7 @@ class ArDriveHTTP {
         functionName: 'post',
         arguments: [
           url,
-          headers,
+          jsonEncode(headers),
           data,
           contentType,
           normalizeResponseTypeToJS(responseType),

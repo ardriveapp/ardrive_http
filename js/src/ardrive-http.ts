@@ -3,7 +3,7 @@ type FetchResponseType = 'text' | 'json' | 'bytes';
 
 type GetProps = [
   url: string,
-  headers: object,
+  headers: string,
   responseType: FetchResponseType,
   retries: number,
   retryDelayMs: number,
@@ -13,7 +13,7 @@ type GetProps = [
 
 type PostProps = [
   url: string,
-  headers: object,
+  headers: string,
   data: ArrayBuffer | string,
   contentType: string,
   responseType: FetchResponseType,
@@ -91,7 +91,7 @@ var get = async ([
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        ...headers,
+        ...JSON.parse(headers),
       },
       redirect: 'follow',
       signal: controller.signal,
@@ -156,7 +156,7 @@ var post = async ([
       method: 'POST',
       headers: {
         ...(contentType !== requestType.text.contentType ? { 'Content-Type': contentType } : {}),
-        ...headers,
+        ...JSON.parse(headers),
       },
       redirect: 'follow',
       body: data,
