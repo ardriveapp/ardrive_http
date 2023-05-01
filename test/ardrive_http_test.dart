@@ -139,6 +139,7 @@ void main() {
           url: url,
           headers: {'test': 'ok'},
           data: Uint8List(10),
+          responseType: ResponseType.plain,
         );
 
         expect(response.data, 'ok');

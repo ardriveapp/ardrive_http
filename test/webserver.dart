@@ -29,7 +29,7 @@ List<int> retryStatusCodes = [
 const Map<String, Object> headers = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
-  'access-control-allow-headers': 'content-type',
+  'access-control-allow-headers': 'content-type, test',
   'allow': '*',
 };
 
@@ -61,7 +61,32 @@ Future<void> main() async {
     ),
   );
 
-  router.all(
+  router.options(
+    '/headerCheck',
+    (Request request) => Response.ok(
+      null,
+      headers: headers,
+    ),
+  );
+
+  router.get(
+    '/headerCheck',
+    (Request request) {
+      if (request.headers['test'] == 'ok') {
+        return Response.ok(
+          'ok',
+          headers: headers,
+        );
+      } else {
+        return Response(
+          400,
+          headers: headers,
+        );
+      }
+    },
+  );
+
+  router.post(
     '/headerCheck',
     (Request request) {
       if (request.headers['test'] == 'ok') {
