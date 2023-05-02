@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -59,16 +60,19 @@ class ArDriveHTTP {
   // get method
   Future<ArDriveHTTPResponse> get({
     required String url,
+    Map<String, dynamic> headers = const <String, dynamic>{},
     ResponseType responseType = ResponseType.plain,
   }) async {
     final Map getIOParams = <String, dynamic>{};
     getIOParams['url'] = url;
+    getIOParams['headers'] = headers;
     getIOParams['responseType'] = responseType;
 
     if (kIsWeb) {
       if (await _loadWebWorkers()) {
         return await _getWeb(
           url: url,
+          headers: headers,
           responseType: responseType,
         );
       } else {
@@ -89,12 +93,13 @@ class ArDriveHTTP {
 
   Future<ArDriveHTTPResponse> _getIO(Map params) async {
     final String url = params['url'];
+    final Map<String, dynamic> headers = params['headers'];
     final ResponseType responseType = params['responseType'];
 
     try {
       Response response = await _dio().get(
         url,
-        options: Options(responseType: responseType),
+        options: Options(responseType: responseType, headers: headers),
       );
 
       return ArDriveHTTPResponse(
@@ -114,6 +119,7 @@ class ArDriveHTTP {
   Future<ArDriveHTTPResponse> _getWeb({
     required String url,
     required ResponseType responseType,
+    Map<String, dynamic> headers = const <String, dynamic>{},
   }) async {
     try {
       final LinkedHashMap<dynamic, dynamic> response =
@@ -121,6 +127,7 @@ class ArDriveHTTP {
         functionName: 'get',
         arguments: [
           url,
+          jsonEncode(headers),
           normalizeResponseTypeToJS(responseType),
           retries,
           retryDelayMs,
@@ -154,10 +161,12 @@ class ArDriveHTTP {
     required String url,
     required dynamic data,
     required ContentType contentType,
+    Map<String, dynamic> headers = const <String, dynamic>{},
     ResponseType responseType = ResponseType.plain,
   }) async {
     final Map postIOParams = <String, dynamic>{};
     postIOParams['url'] = url;
+    postIOParams['headers'] = headers;
     postIOParams['data'] = data;
     postIOParams['contentType'] = contentType;
     postIOParams['responseType'] = responseType;
@@ -165,6 +174,7 @@ class ArDriveHTTP {
       if (await _loadWebWorkers()) {
         return await _postWeb(
           url: url,
+          headers: headers,
           data: data,
           contentType: contentType.toString(),
           responseType: responseType,
@@ -193,10 +203,12 @@ class ArDriveHTTP {
   Future<ArDriveHTTPResponse> postBytes({
     required String url,
     required Uint8List data,
+    Map<String, dynamic> headers = const <String, dynamic>{},
     ResponseType responseType = ResponseType.json,
   }) async {
     return post(
       url: url,
+      headers: headers,
       data: data,
       contentType: ContentType.binary,
       responseType: responseType,
@@ -205,6 +217,8 @@ class ArDriveHTTP {
 
   Future<ArDriveHTTPResponse> _postIO(Map params) async {
     final String url = params['url'];
+    final Map<String, dynamic> headers =
+        params['headers'] ?? <String, dynamic>{};
     final dynamic data = params['data'];
     final ContentType contentType = params['contentType'];
     final ResponseType responseType = params['responseType'];
@@ -218,6 +232,7 @@ class ArDriveHTTP {
                 : data,
             options: Options(
               requestEncoder: (_, __) => data,
+              headers: headers,
               contentType: contentType.toString(),
               responseType: responseType,
             ),
@@ -245,6 +260,7 @@ class ArDriveHTTP {
     required dynamic data,
     required String contentType,
     required ResponseType responseType,
+    Map<String, dynamic> headers = const <String, dynamic>{},
   }) async {
     try {
       final LinkedHashMap<dynamic, dynamic> response =
@@ -252,6 +268,7 @@ class ArDriveHTTP {
         functionName: 'post',
         arguments: [
           url,
+          jsonEncode(headers),
           data,
           contentType,
           normalizeResponseTypeToJS(responseType),

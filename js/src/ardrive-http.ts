@@ -3,6 +3,7 @@ type FetchResponseType = 'text' | 'json' | 'bytes';
 
 type GetProps = [
   url: string,
+  headers: string,
   responseType: FetchResponseType,
   retries: number,
   retryDelayMs: number,
@@ -12,6 +13,7 @@ type GetProps = [
 
 type PostProps = [
   url: string,
+  headers: string,
   data: ArrayBuffer | string,
   contentType: string,
   responseType: FetchResponseType,
@@ -74,14 +76,23 @@ var requestType = {
   },
 };
 
-var get = async ([url, responseType, retries, retryDelayMs, noLogs = false, retryAttempts = 0]: GetProps): Promise<
-  ArDriveHTTPResponse | ArDriveHTTPException
-> => {
+var get = async ([
+  url,
+  headers,
+  responseType,
+  retries,
+  retryDelayMs,
+  noLogs = false,
+  retryAttempts = 0,
+]: GetProps): Promise<ArDriveHTTPResponse | ArDriveHTTPException> => {
   try {
     const controller = new AbortController();
     const responseTimeout = setTimeout(() => controller.abort(), 8000); // 8s
     const response = await fetch(url, {
       method: 'GET',
+      headers: {
+        ...JSON.parse(headers),
+      },
       redirect: 'follow',
       signal: controller.signal,
     });
@@ -95,7 +106,7 @@ var get = async ([url, responseType, retries, retryDelayMs, noLogs = false, retr
         logger.retry(url, statusCode, statusMessage, retryAttempts);
       }
 
-      return await get([url, responseType, retries - 1, retryDelayMs, noLogs, retryAttempts + 1]);
+      return await get([url, headers, responseType, retries - 1, retryDelayMs, noLogs, retryAttempts + 1]);
     } else {
       if (isStatusCodeError(statusCode)) {
         const log = logMessage(url, statusCode, statusMessage, retryAttempts);
@@ -129,6 +140,7 @@ var get = async ([url, responseType, retries, retryDelayMs, noLogs = false, retr
 
 var post = async ([
   url,
+  headers,
   data,
   contentType,
   responseType,
@@ -144,6 +156,7 @@ var post = async ([
       method: 'POST',
       headers: {
         ...(contentType !== requestType.text.contentType ? { 'Content-Type': contentType } : {}),
+        ...JSON.parse(headers),
       },
       redirect: 'follow',
       body: data,
@@ -159,7 +172,17 @@ var post = async ([
         logger.retry(url, statusCode, statusMessage, retryAttempts);
       }
 
-      return await post([url, data, contentType, responseType, retries - 1, retryDelayMs, noLogs, retryAttempts + 1]);
+      return await post([
+        url,
+        headers,
+        data,
+        contentType,
+        responseType,
+        retries - 1,
+        retryDelayMs,
+        noLogs,
+        retryAttempts + 1,
+      ]);
     } else {
       if (isStatusCodeError(statusCode)) {
         const log = logMessage(url, statusCode, statusMessage, retryAttempts);
