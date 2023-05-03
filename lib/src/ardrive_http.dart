@@ -5,10 +5,18 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:ardrive_http/src/responses.dart';
+import 'package:ardrive_http/src/utils.dart';
+import 'package:cancellation_token_http/http.dart' as http_cancel;
+import 'package:cancellation_token_http/retry.dart' as http_cancel_retry;
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/retry.dart' as http_retry;
 import 'package:isolated_worker/js_isolated_worker.dart';
+
+import 'io/fetch_client_stub.dart'
+  if (dart.library.html) 'package:fetch_client/fetch_client.dart' as fetch;
 
 const List<String> jsScriptsToImport = <String>['ardrive-http.js'];
 
@@ -89,6 +97,77 @@ class ArDriveHTTP {
 
   Future<ArDriveHTTPResponse> getAsBytes(String url) async {
     return get(url: url, responseType: ResponseType.bytes);
+  }
+
+  Future<ArDriveHTTPResponse> getAsByteStream(String url, {Completer<String>? cancelWithReason}) async {
+    try {
+      return kIsWeb 
+        ? _getAsByteStreamWeb(url, cancelWithReason: cancelWithReason)
+        : _getAsByteStreamIO(url, cancelWithReason: cancelWithReason);
+    } catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        dioException: error,
+      );
+    }
+  }
+
+  Future<ArDriveHTTPResponse> _getAsByteStreamWeb(String url, {Completer<String>? cancelWithReason}) async {
+    final client = http_retry.RetryClient(
+      fetch.FetchClient(mode: fetch.RequestMode.cors),
+      when: (response) => retryStatusCodes.contains(response.statusCode),
+      onRetry: (_, __, ___) => retryAttempts++,
+    );
+
+    final response = (await client.send(
+      http.Request(
+        'GET', 
+        Uri.parse(url),
+      ),
+    )) as fetch.FetchResponse;
+    
+    cancelWithReason?.future.then((value) {
+      debugPrint('Cancelling request to $url with reason: $value');
+      response.cancel();
+    });
+    
+    final byteStream = response.stream.map((event) => Uint8List.fromList(event));
+    return ArDriveHTTPResponse(
+      data: byteStream,
+      statusCode: response.statusCode,
+      statusMessage: response.reasonPhrase,
+      retryAttempts: retryAttempts,
+    );
+  }
+
+  Future<ArDriveHTTPResponse> _getAsByteStreamIO(String url, {Completer<String>? cancelWithReason}) async {
+    final client = http_cancel_retry.RetryClient(
+      http_cancel.Client(),
+      when: (response) => retryStatusCodes.contains(response.statusCode),
+      onRetry: (_, __, ___) => retryAttempts++,
+    );
+    final cancellationToken = http_cancel.CancellationToken();
+
+    final response = await client.send(
+      http_cancel.Request(
+        'GET', 
+        Uri.parse(url),
+      ),
+      cancellationToken: cancellationToken,
+    );
+    
+    cancelWithReason?.future.then((value) {
+      debugPrint('Cancelling request to $url with reason: $value');
+      cancellationToken.cancel();
+    });
+    
+    final byteStream = response.stream.map((event) => Uint8List.fromList(event));
+    return ArDriveHTTPResponse(
+      data: byteStream,
+      statusCode: response.statusCode,
+      statusMessage: response.reasonPhrase,
+      retryAttempts: retryAttempts,
+    );
   }
 
   Future<ArDriveHTTPResponse> _getIO(Map params) async {
