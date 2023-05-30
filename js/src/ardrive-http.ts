@@ -26,20 +26,21 @@ type PostProps = [
 type ArDriveHTTPResponse = {
   statusCode: number;
   statusMessage: string;
-  data: object | string | BinaryData;
+  data: object | string | ArrayBuffer;
   retryAttempts: number;
 };
 
 type ArDriveHTTPException = {
   error: string;
   retryAttempts: number;
+  statusCode?: number;
+  statusMessage?: string;
 };
 
 // Utilities
 var retryStatusCodes = [408, 429, 440, 460, 499, 500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 527, 598, 599];
 
 var isStatusCodeError = (code: number): boolean => code >= 400 && code <= 599;
-
 var retryDelay = (attempt: number, retryDelayMs: number): number => retryDelayMs * Math.pow(1.5, attempt);
 
 var logMessage = (url: string, statusCode: number, statusMessage: string, retryAttempts: number): string => {
@@ -110,10 +111,12 @@ var get = async ([
     } else {
       if (isStatusCodeError(statusCode)) {
         const log = logMessage(url, statusCode, statusMessage, retryAttempts);
-
+        
         return {
           error: `Network Request Error\n${log}`,
           retryAttempts,
+          statusCode,
+          statusMessage,
         };
       }
     }
@@ -190,11 +193,13 @@ var post = async ([
         return {
           error: `Network Request Error\n${log}`,
           retryAttempts,
+          statusCode,
+          statusMessage,
         };
       }
     }
 
-    const responseBody = await requestType[`${responseType}`].getResponse(response);
+    const responseBody = await requestType[responseType].getResponse(response);
 
     return {
       statusCode,

@@ -21,15 +21,41 @@ class ArDriveHTTPResponse {
 
 class ArDriveHTTPException extends Equatable implements Exception {
   final int retryAttempts;
-  final Object dioException;
+  final Object exception;
+  final int? statusCode;
+  final String? statusMessage;
 
-  const ArDriveHTTPException(
-      {required this.retryAttempts, required this.dioException});
+  const ArDriveHTTPException({
+    required this.retryAttempts,
+    required this.exception,
+    this.statusCode,
+    this.statusMessage,
+  });
+
   @override
   List<Object?> get props => [retryAttempts];
 
   @override
   String toString() {
-    return '$dioException\nRetry attempts: $retryAttempts\n';
+    return 'ArDriveHTTPException: $retryAttempts, $statusCode, $statusMessage, $exception';
+  }
+}
+
+class WebWorkerNetworkRequestError {
+  final int? statusCode;
+  final String? statusMessage;
+  final int retryAttempts;
+  final Object? error;
+
+  const WebWorkerNetworkRequestError({
+    this.statusCode,
+    this.statusMessage,
+    required this.retryAttempts,
+    this.error,
+  });
+
+  @override
+  String toString() {
+    return 'WebWorkerNetworkRequestError: $error';
   }
 }

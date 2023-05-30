@@ -91,72 +91,6 @@ class ArDriveHTTP {
     return get(url: url, responseType: ResponseType.bytes);
   }
 
-  Future<ArDriveHTTPResponse> _getIO(Map params) async {
-    final String url = params['url'];
-    final Map<String, dynamic> headers = params['headers'];
-    final ResponseType responseType = params['responseType'];
-
-    try {
-      Response response = await _dio().get(
-        url,
-        options: Options(responseType: responseType, headers: headers),
-      );
-
-      return ArDriveHTTPResponse(
-        data: response.data,
-        statusCode: response.statusCode,
-        statusMessage: response.statusMessage,
-        retryAttempts: retryAttempts,
-      );
-    } catch (error) {
-      throw ArDriveHTTPException(
-        retryAttempts: retryAttempts,
-        dioException: error,
-      );
-    }
-  }
-
-  Future<ArDriveHTTPResponse> _getWeb({
-    required String url,
-    required ResponseType responseType,
-    Map<String, dynamic> headers = const <String, dynamic>{},
-  }) async {
-    try {
-      final LinkedHashMap<dynamic, dynamic> response =
-          await JsIsolatedWorker().run(
-        functionName: 'get',
-        arguments: [
-          url,
-          jsonEncode(headers),
-          normalizeResponseTypeToJS(responseType),
-          retries,
-          retryDelayMs,
-          noLogs,
-        ],
-      );
-
-      if (response['error'] != null) {
-        retryAttempts = response['retryAttempts'];
-
-        throw response['error'];
-      }
-
-      return ArDriveHTTPResponse(
-        data: responseType == ResponseType.bytes
-            ? Uint8List.view(response['data'])
-            : response['data'],
-        statusCode: response['statusCode'],
-        statusMessage: response['statusMessage'],
-        retryAttempts: response['retryAttempts'],
-      );
-    } catch (error) {
-      throw ArDriveHTTPException(
-        retryAttempts: retryAttempts,
-        dioException: error,
-      );
-    }
-  }
-
   Future<ArDriveHTTPResponse> post({
     required String url,
     required dynamic data,
@@ -165,11 +99,13 @@ class ArDriveHTTP {
     ResponseType responseType = ResponseType.plain,
   }) async {
     final Map postIOParams = <String, dynamic>{};
+
     postIOParams['url'] = url;
     postIOParams['headers'] = headers;
     postIOParams['data'] = data;
     postIOParams['contentType'] = contentType;
     postIOParams['responseType'] = responseType;
+
     if (kIsWeb) {
       if (await _loadWebWorkers()) {
         return await _postWeb(
@@ -215,31 +151,45 @@ class ArDriveHTTP {
     );
   }
 
-  Future<ArDriveHTTPResponse> _postIO(Map params) async {
+  Future<ArDriveHTTPResponse> _performIORequest({
+    required String method,
+    required Map params,
+  }) async {
     final String url = params['url'];
     final Map<String, dynamic> headers =
         params['headers'] ?? <String, dynamic>{};
     final dynamic data = params['data'];
-    final ContentType contentType = params['contentType'];
+    final ContentType? contentType = params['contentType'];
     final ResponseType responseType = params['responseType'];
 
     try {
-      Response response = await _dio()
-          .post(
-            url,
-            data: contentType == ContentType.binary
-                ? Stream.fromIterable([data])
-                : data,
-            options: Options(
-              requestEncoder: (_, __) => data,
-              headers: headers,
-              contentType: contentType.toString(),
-              responseType: responseType,
-            ),
-          )
-          .timeout(
-            const Duration(seconds: 8), // 8s timeout
-          );
+      Response response;
+
+      if (method == 'GET') {
+        response = await _dio().get(
+          url,
+          options: Options(responseType: responseType, headers: headers),
+        );
+      } else if (method == 'POST') {
+        response = await _dio()
+            .post(
+              url,
+              data: contentType == ContentType.binary
+                  ? Stream.fromIterable([data])
+                  : data,
+              options: Options(
+                requestEncoder: (_, __) => data,
+                headers: headers,
+                contentType: contentType?.toString(),
+                responseType: responseType,
+              ),
+            )
+            .timeout(
+              const Duration(seconds: 8), // 8s timeout
+            );
+      } else {
+        throw UnsupportedError('Unsupported method: $method');
+      }
 
       return ArDriveHTTPResponse(
         data: response.data,
@@ -247,41 +197,66 @@ class ArDriveHTTP {
         statusMessage: response.statusMessage,
         retryAttempts: retryAttempts,
       );
+    } on DioError catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        exception: error,
+        statusCode: error.response?.statusCode,
+        statusMessage: error.response?.statusMessage,
+      );
     } catch (error) {
       throw ArDriveHTTPException(
         retryAttempts: retryAttempts,
-        dioException: error,
+        exception: error,
       );
     }
   }
 
-  Future<ArDriveHTTPResponse> _postWeb({
+  Future<ArDriveHTTPResponse> _getIO(Map params) async {
+    return _performIORequest(method: 'GET', params: params);
+  }
+
+  Future<ArDriveHTTPResponse> _postIO(Map params) async {
+    return _performIORequest(method: 'POST', params: params);
+  }
+
+  Future<ArDriveHTTPResponse> _performWebRequest({
+    required String functionName,
     required String url,
-    required dynamic data,
-    required String contentType,
     required ResponseType responseType,
+    dynamic data,
+    String? contentType,
     Map<String, dynamic> headers = const <String, dynamic>{},
   }) async {
     try {
-      final LinkedHashMap<dynamic, dynamic> response =
-          await JsIsolatedWorker().run(
-        functionName: 'post',
-        arguments: [
-          url,
-          jsonEncode(headers),
-          data,
-          contentType,
-          normalizeResponseTypeToJS(responseType),
-          retries,
-          retryDelayMs,
-          noLogs,
-        ],
-      );
+      late final Map response;
+
+      switch (functionName) {
+        case 'get':
+          response = await _getResponseForGetMethodOnWebWorker(
+              url: url, responseType: responseType);
+          break;
+        case 'post':
+          response = await _getResponseForPostMethodOnWebWorker(
+            url: url,
+            data: data,
+            contentType: contentType,
+            responseType: responseType,
+          );
+          break;
+        default:
+          throw UnsupportedError('Unsupported method: $functionName');
+      }
 
       if (response['error'] != null) {
         retryAttempts = response['retryAttempts'];
 
-        throw response['error'];
+        throw WebWorkerNetworkRequestError(
+          statusCode: response['statusCode'],
+          statusMessage: response['statusMessage'],
+          retryAttempts: retryAttempts,
+          error: response['error'],
+        );
       }
 
       return ArDriveHTTPResponse(
@@ -292,12 +267,95 @@ class ArDriveHTTP {
         statusMessage: response['statusMessage'],
         retryAttempts: response['retryAttempts'],
       );
+    } on WebWorkerNetworkRequestError catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        exception: error,
+        statusCode: error.statusCode,
+        statusMessage: error.statusMessage,
+      );
     } catch (error) {
       throw ArDriveHTTPException(
         retryAttempts: retryAttempts,
-        dioException: error,
+        exception: error,
       );
     }
+  }
+
+  Future<ArDriveHTTPResponse> _getWeb({
+    required String url,
+    required ResponseType responseType,
+    Map<String, dynamic> headers = const <String, dynamic>{},
+  }) async {
+    return _performWebRequest(
+      functionName: 'get',
+      url: url,
+      responseType: responseType,
+      headers: headers,
+    );
+  }
+
+  Future<ArDriveHTTPResponse> _postWeb({
+    required String url,
+    required dynamic data,
+    required String contentType,
+    required ResponseType responseType,
+    Map<String, dynamic> headers = const <String, dynamic>{},
+  }) async {
+    return _performWebRequest(
+      functionName: 'post',
+      url: url,
+      data: data,
+      contentType: contentType,
+      responseType: responseType,
+      headers: headers,
+    );
+  }
+
+  Future<LinkedHashMap<dynamic, dynamic>> _getResponseForGetMethodOnWebWorker({
+    required String url,
+    required ResponseType responseType,
+    Map<String, dynamic> headers = const <String, dynamic>{},
+  }) async {
+    final LinkedHashMap<dynamic, dynamic> response =
+        await JsIsolatedWorker().run(
+      functionName: 'get',
+      arguments: [
+        url,
+        jsonEncode(headers),
+        normalizeResponseTypeToJS(responseType),
+        retries,
+        retryDelayMs,
+        noLogs,
+      ],
+    );
+
+    return response;
+  }
+
+  Future<LinkedHashMap<dynamic, dynamic>> _getResponseForPostMethodOnWebWorker({
+    required String url,
+    required dynamic data,
+    required String? contentType,
+    required ResponseType responseType,
+    Map<String, dynamic> headers = const <String, dynamic>{},
+  }) async {
+    final LinkedHashMap<dynamic, dynamic> response =
+        await JsIsolatedWorker().run(
+      functionName: 'post',
+      arguments: [
+        url,
+        jsonEncode(data),
+        contentType,
+        jsonEncode(headers),
+        normalizeResponseTypeToJS(responseType),
+        retries,
+        retryDelayMs,
+        noLogs,
+      ],
+    );
+
+    return response;
   }
 
   Future<bool> _loadWebWorkers() async {
