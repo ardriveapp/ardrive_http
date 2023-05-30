@@ -26,7 +26,7 @@ type PostProps = [
 type ArDriveHTTPResponse = {
   statusCode: number;
   statusMessage: string;
-  data: object | string | ArrayBuffer;
+  data: object | string | BinaryData;
   retryAttempts: number;
 };
 
