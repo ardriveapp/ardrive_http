@@ -108,10 +108,17 @@ class ArDriveHTTP {
         statusMessage: response.statusMessage,
         retryAttempts: retryAttempts,
       );
+    } on DioError catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        exception: error,
+        statusCode: error.response?.statusCode,
+        statusMessage: error.response?.statusMessage,
+      );
     } catch (error) {
       throw ArDriveHTTPException(
         retryAttempts: retryAttempts,
-        dioException: error,
+        exception: error,
       );
     }
   }
@@ -138,7 +145,12 @@ class ArDriveHTTP {
       if (response['error'] != null) {
         retryAttempts = response['retryAttempts'];
 
-        throw response['error'];
+        throw WebWorkerNetworkRequestError(
+          statusCode: response['statusCode'],
+          statusMessage: response['statusMessage'],
+          retryAttempts: retryAttempts,
+          error: response['error'],
+        );
       }
 
       return ArDriveHTTPResponse(
@@ -149,10 +161,17 @@ class ArDriveHTTP {
         statusMessage: response['statusMessage'],
         retryAttempts: response['retryAttempts'],
       );
+    } on WebWorkerNetworkRequestError catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        exception: error,
+        statusCode: error.statusCode,
+        statusMessage: error.statusMessage,
+      );
     } catch (error) {
       throw ArDriveHTTPException(
         retryAttempts: retryAttempts,
-        dioException: error,
+        exception: error,
       );
     }
   }
@@ -247,10 +266,17 @@ class ArDriveHTTP {
         statusMessage: response.statusMessage,
         retryAttempts: retryAttempts,
       );
+    } on DioError catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        exception: error,
+        statusCode: error.response?.statusCode,
+        statusMessage: error.response?.statusMessage,
+      );
     } catch (error) {
       throw ArDriveHTTPException(
         retryAttempts: retryAttempts,
-        dioException: error,
+        exception: error,
       );
     }
   }
@@ -281,7 +307,12 @@ class ArDriveHTTP {
       if (response['error'] != null) {
         retryAttempts = response['retryAttempts'];
 
-        throw response['error'];
+        throw WebWorkerNetworkRequestError(
+          statusCode: response['statusCode'],
+          statusMessage: response['statusMessage'],
+          retryAttempts: retryAttempts,
+          error: response['error'],
+        );
       }
 
       return ArDriveHTTPResponse(
@@ -292,10 +323,17 @@ class ArDriveHTTP {
         statusMessage: response['statusMessage'],
         retryAttempts: response['retryAttempts'],
       );
+    } on WebWorkerNetworkRequestError catch (error) {
+      throw ArDriveHTTPException(
+        retryAttempts: retryAttempts,
+        exception: error,
+        statusCode: error.statusCode,
+        statusMessage: error.statusMessage,
+      );
     } catch (error) {
       throw ArDriveHTTPException(
         retryAttempts: retryAttempts,
-        dioException: error,
+        exception: error,
       );
     }
   }

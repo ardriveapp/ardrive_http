@@ -78,7 +78,7 @@ void main() {
           throwsA(
             const ArDriveHTTPException(
               retryAttempts: 0,
-              dioException: {},
+              exception: {},
             ),
           ),
         );
@@ -93,7 +93,7 @@ void main() {
             throwsA(
               const ArDriveHTTPException(
                 retryAttempts: 8,
-                dioException: {},
+                exception: {},
               ),
             ),
           );
@@ -113,7 +113,7 @@ void main() {
           throwsA(
             const ArDriveHTTPException(
               retryAttempts: 4,
-              dioException: {},
+              exception: {},
             ),
           ),
         );
@@ -157,7 +157,7 @@ void main() {
           throwsA(
             const ArDriveHTTPException(
               retryAttempts: 0,
-              dioException: {},
+              exception: {},
             ),
           ),
         );
@@ -176,7 +176,7 @@ void main() {
             throwsA(
               const ArDriveHTTPException(
                 retryAttempts: 8,
-                dioException: {},
+                exception: {},
               ),
             ),
           );
@@ -201,7 +201,7 @@ void main() {
           throwsA(
             const ArDriveHTTPException(
               retryAttempts: 4,
-              dioException: {},
+              exception: {},
             ),
           ),
         );
