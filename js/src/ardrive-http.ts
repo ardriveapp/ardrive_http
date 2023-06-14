@@ -88,7 +88,7 @@ var get = async ([
 ]: GetProps): Promise<ArDriveHTTPResponse | ArDriveHTTPException> => {
   try {
     const controller = new AbortController();
-    const responseTimeout = setTimeout(() => controller.abort(), 8000); // 8s
+    // const responseTimeout = setTimeout(() => controller.abort(), 8000); // 8s
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -97,7 +97,7 @@ var get = async ([
       redirect: 'follow',
       signal: controller.signal,
     });
-    clearTimeout(responseTimeout);
+    // clearTimeout(responseTimeout);
 
     const statusCode = response.status;
     const statusMessage = response.statusText;
@@ -154,7 +154,7 @@ var post = async ([
 ]: PostProps): Promise<ArDriveHTTPResponse | ArDriveHTTPException> => {
   try {
     const controller = new AbortController();
-    const responseTimeout = setTimeout(() => controller.abort(), 8000); // 8s
+    // const responseTimeout = setTimeout(() => controller.abort(), 8000); // 8s
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -165,7 +165,7 @@ var post = async ([
       body: data,
       signal: controller.signal,
     });
-    clearTimeout(responseTimeout);
+    // clearTimeout(responseTimeout);
 
     const statusCode = response.status;
     const statusMessage = response.statusText;
