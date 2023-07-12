@@ -228,8 +228,6 @@ class ArDriveHTTP {
       hasProgressIndicator: hasProgressIndicator,
     );
 
-    print('isWebWorkerPossible: $isWebWorkerPossible');
-
     if (isWebWorkerPossible) {
       return await _postWeb(
         url: url,
