@@ -194,6 +194,8 @@ class ArDriveHTTP {
   ///
   /// For the Dart IO platform, or if a progress callback is provided, it uses the Dart IO implementation (`_postIO`).
   ///
+  /// We only use isolates when no progress callback is provided because isolates cannot communicate with the main thread
+  ///
   Future<ArDriveHTTPResponse> post({
     required String url,
     required dynamic data,
@@ -204,33 +206,30 @@ class ArDriveHTTP {
     Duration sendTimeout = const Duration(seconds: 8),
     Duration receiveTimeout = const Duration(seconds: 8),
   }) async {
-    final Map postIOParams = <String, dynamic>{};
-    postIOParams['url'] = url;
-    postIOParams['headers'] = headers;
-    postIOParams['data'] = data;
-    postIOParams['contentType'] = contentType;
-    postIOParams['responseType'] = responseType;
-    postIOParams['onSendProgress'] = onSendProgress;
-    postIOParams['sendTimeout'] = sendTimeout;
-    postIOParams['receiveTimeout'] = receiveTimeout;
+    final postIOParams = <String, dynamic>{
+      'url': url,
+      'headers': headers,
+      'data': data,
+      'contentType': contentType,
+      'responseType': responseType,
+      'onSendProgress': onSendProgress,
+      'sendTimeout': sendTimeout,
+      'receiveTimeout': receiveTimeout,
+    };
 
-    if (onSendProgress == null) {
-      if (kIsWeb) {
-        if (await _loadWebWorkers()) {
-          return await _postWeb(
-            url: url,
-            headers: headers,
-            data: data,
-            contentType: contentType.toString(),
-            responseType: responseType,
-          );
-        } else {
-          return await compute(_postIO, postIOParams);
-        }
-      }
+    if (onSendProgress == null && kIsWeb && await _loadWebWorkers()) {
+      return await _postWeb(
+        url: url,
+        headers: headers,
+        data: data,
+        contentType: contentType.toString(),
+        responseType: responseType,
+      );
     }
 
-    return await _postIO(postIOParams);
+    return onSendProgress == null && !kIsWeb
+        ? await compute(_postIO, postIOParams)
+        : await _postIO(postIOParams);
   }
 
   Future<ArDriveHTTPResponse> postJson({
