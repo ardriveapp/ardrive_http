@@ -196,6 +196,8 @@ class ArDriveHTTP {
   ///
   /// We only use isolates when no progress callback is provided because isolates cannot communicate with the main thread
   ///
+  /// `data` as a Stream is only supported on the Dart IO platform
+  ///
   Future<ArDriveHTTPResponse> post({
     required String url,
     required dynamic data,
@@ -217,7 +219,7 @@ class ArDriveHTTP {
       'receiveTimeout': receiveTimeout,
     };
 
-    if (onSendProgress == null && kIsWeb && await _loadWebWorkers()) {
+    if (await _isWebWorkerPossible(data, postIOParams)) {
       return await _postWeb(
         url: url,
         headers: headers,
@@ -230,6 +232,15 @@ class ArDriveHTTP {
     return onSendProgress == null && !kIsWeb
         ? await compute(_postIO, postIOParams)
         : await _postIO(postIOParams);
+  }
+
+  Future<bool> _isWebWorkerPossible(
+      dynamic data, Map<String, dynamic> params) async {
+    final isStream = data is Stream;
+    final noProgress = params['onSendProgress'] == null;
+    final loadedWebWorkers = await _loadWebWorkers();
+
+    return kIsWeb && !isStream && noProgress && loadedWebWorkers;
   }
 
   Future<ArDriveHTTPResponse> postJson({
