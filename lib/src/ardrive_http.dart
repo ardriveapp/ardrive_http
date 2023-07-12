@@ -225,8 +225,10 @@ class ArDriveHTTP {
 
     final isWebWorkerPossible = await _isWebWorkerPossible(
       isStream: isStream,
-      hasProgressIndicator: !hasProgressIndicator,
+      hasProgressIndicator: hasProgressIndicator,
     );
+
+    print('isWebWorkerPossible: $isWebWorkerPossible');
 
     if (isWebWorkerPossible) {
       return await _postWeb(
