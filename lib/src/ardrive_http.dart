@@ -214,21 +214,23 @@ class ArDriveHTTP {
     postIOParams['sendTimeout'] = sendTimeout;
     postIOParams['receiveTimeout'] = receiveTimeout;
 
-    if (kIsWeb && onSendProgress == null) {
-      if (await _loadWebWorkers()) {
-        return await _postWeb(
-          url: url,
-          headers: headers,
-          data: data,
-          contentType: contentType.toString(),
-          responseType: responseType,
-        );
-      } else {
-        return await _postIO(postIOParams);
+    if (onSendProgress == null) {
+      if (kIsWeb) {
+        if (await _loadWebWorkers()) {
+          return await _postWeb(
+            url: url,
+            headers: headers,
+            data: data,
+            contentType: contentType.toString(),
+            responseType: responseType,
+          );
+        } else {
+          return await compute(_postIO, postIOParams);
+        }
       }
     }
 
-    return await compute(_postIO, postIOParams);
+    return await _postIO(postIOParams);
   }
 
   Future<ArDriveHTTPResponse> postJson({
