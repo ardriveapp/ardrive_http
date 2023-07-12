@@ -219,7 +219,8 @@ class ArDriveHTTP {
       'receiveTimeout': receiveTimeout,
     };
 
-    final hasProgressIndicator = postIOParams['onSendProgress'] == null;
+    final hasProgressIndicator = postIOParams['onSendProgress'] != null;
+
     final isStream = data is Stream;
 
     final isWebWorkerPossible = await _isWebWorkerPossible(
