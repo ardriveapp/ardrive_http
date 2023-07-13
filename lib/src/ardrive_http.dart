@@ -220,10 +220,6 @@ class ArDriveHTTP {
     };
 
     final hasProgressIndicator = postIOParams['onSendProgress'] != null;
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
     final isStream = data is Stream;
 
     final isWebWorkerPossible = await _isWebWorkerPossible(
