@@ -26,6 +26,10 @@ String normalizeResponseTypeToJS(ResponseType responseType) {
   }
 }
 
+/// `ArDriveHTTP` is a HTTP client for ArDrive application. It encapsulates the logic for sending HTTP requests and handling responses.
+/// It provides support for GET and POST requests, retrying failed requests, and optional logging.
+/// The class is designed to work across different platforms (Web and Dart IO) and supports different types of data (JSON, bytes, etc.).
+/// For the Web platform, it attempts to use web workers for requests when possible, falling back to the Dart IO implementation otherwise.
 class ArDriveHTTP {
   int retries;
   int retryDelayMs;
@@ -57,7 +61,12 @@ class ArDriveHTTP {
     return dio;
   }
 
-  // get method
+  /// Sends a GET request to the specified URL with the provided headers.
+  /// The method behaves differently depending on the platform (Web or Dart IO).
+  ///
+  /// If web workers are not available, it falls back to the Dart IO implementation (`_getIO`).
+  ///
+  /// For the Dart IO platform, it uses the Dart IO implementation
   Future<ArDriveHTTPResponse> get({
     required String url,
     Map<String, dynamic> headers = const <String, dynamic>{},
@@ -176,34 +185,74 @@ class ArDriveHTTP {
     }
   }
 
+  /// Sends a POST request to the specified URL with the provided data and headers.
+  /// The method behaves differently depending on the platform (Web or Dart IO) and whether a progress callback is provided.
+  ///
+  /// For the Web platform, if no progress callback is provided (`onSendProgress` is null),
+  /// it attempts to use a web worker for the request (`_postWeb`). If web workers are not available,
+  /// it falls back to the Dart IO implementation (`_postIO`).
+  ///
+  /// For the Dart IO platform, or if a progress callback is provided, it uses the Dart IO implementation (`_postIO`).
+  ///
+  /// We only use isolates when no progress callback is provided because isolates cannot communicate with the main thread
+  ///
+  /// `data` as a Stream is only supported on the Dart IO platform and won't work on Isolates.
+  ///
   Future<ArDriveHTTPResponse> post({
     required String url,
     required dynamic data,
     required ContentType contentType,
     Map<String, dynamic> headers = const <String, dynamic>{},
     ResponseType responseType = ResponseType.plain,
+    Function(double)? onSendProgress,
+    Duration sendTimeout = const Duration(seconds: 8),
+    Duration receiveTimeout = const Duration(seconds: 8),
   }) async {
-    final Map postIOParams = <String, dynamic>{};
-    postIOParams['url'] = url;
-    postIOParams['headers'] = headers;
-    postIOParams['data'] = data;
-    postIOParams['contentType'] = contentType;
-    postIOParams['responseType'] = responseType;
-    if (kIsWeb) {
-      if (await _loadWebWorkers()) {
-        return await _postWeb(
-          url: url,
-          headers: headers,
-          data: data,
-          contentType: contentType.toString(),
-          responseType: responseType,
-        );
-      } else {
-        return await _postIO(postIOParams);
-      }
+    final postIOParams = <String, dynamic>{
+      'url': url,
+      'headers': headers,
+      'data': data,
+      'contentType': contentType,
+      'responseType': responseType,
+      'onSendProgress': onSendProgress,
+      'sendTimeout': sendTimeout,
+      'receiveTimeout': receiveTimeout,
+    };
+
+    final hasProgressIndicator = postIOParams['onSendProgress'] != null;
+    final isStream = data is Stream;
+
+    final isWebWorkerPossible = await _isWebWorkerPossible(
+      isStream: isStream,
+      hasProgressIndicator: hasProgressIndicator,
+    );
+
+    if (isWebWorkerPossible) {
+      return await _postWeb(
+        url: url,
+        headers: headers,
+        data: data,
+        contentType: contentType.toString(),
+        responseType: responseType,
+      );
     }
 
-    return await compute(_postIO, postIOParams);
+    return !hasProgressIndicator && !isStream
+        ? await compute(_postIO, postIOParams)
+        : await _postIO(postIOParams);
+  }
+
+  Future<bool> _isWebWorkerPossible({
+    required bool isStream,
+    required bool hasProgressIndicator,
+  }) async {
+    if (!kIsWeb) {
+      return false;
+    }
+
+    final loadedWebWorkers = await _loadWebWorkers();
+
+    return !isStream && !hasProgressIndicator && loadedWebWorkers;
   }
 
   Future<ArDriveHTTPResponse> postJson({
@@ -219,11 +268,16 @@ class ArDriveHTTP {
     );
   }
 
+  /// Sends a POST request with byte array data to the specified URL.
+  /// The `data` parameter specifies the byte array data to include in the request body.
   Future<ArDriveHTTPResponse> postBytes({
     required String url,
     required Uint8List data,
     Map<String, dynamic> headers = const <String, dynamic>{},
     ResponseType responseType = ResponseType.json,
+    Function(double)? onSendProgress,
+    Duration sendTimeout = const Duration(seconds: 8),
+    Duration receiveTimeout = const Duration(seconds: 8),
   }) async {
     return post(
       url: url,
@@ -231,34 +285,66 @@ class ArDriveHTTP {
       data: data,
       contentType: ContentType.binary,
       responseType: responseType,
+      onSendProgress: onSendProgress,
+      sendTimeout: sendTimeout,
+      receiveTimeout: receiveTimeout,
     );
   }
 
-  Future<ArDriveHTTPResponse> _postIO(Map params) async {
+  /// Sends a POST request with byte array data as a stream to the specified URL.
+  /// The `data` parameter specifies the byte array data as a stream to include in the request body.
+  Future<ArDriveHTTPResponse> postBytesAsStream({
+    required String url,
+    required Stream<List<int>> data,
+    Map<String, dynamic> headers = const <String, dynamic>{},
+    ResponseType responseType = ResponseType.json,
+    Function(double)? onSendProgress,
+    Duration sendTimeout = const Duration(seconds: 8),
+    Duration receiveTimeout = const Duration(seconds: 8),
+  }) async {
+    return post(
+      url: url,
+      headers: headers,
+      data: data,
+      contentType: ContentType.binary,
+      responseType: responseType,
+      onSendProgress: onSendProgress,
+      sendTimeout: sendTimeout,
+      receiveTimeout: receiveTimeout,
+    );
+  }
+
+  Future<ArDriveHTTPResponse> _postIO(
+    Map params,
+  ) async {
     final String url = params['url'];
     final Map<String, dynamic> headers =
         params['headers'] ?? <String, dynamic>{};
     final dynamic data = params['data'];
     final ContentType contentType = params['contentType'];
     final ResponseType responseType = params['responseType'];
+    final Function(double)? onSendProgress = params['onSendProgress'];
+    final Duration sendTimeout = params['sendTimeout'];
+    final Duration receiveTimeout = params['receiveTimeout'];
 
     try {
-      Response response = await _dio()
-          .post(
-            url,
-            data: contentType == ContentType.binary
-                ? Stream.fromIterable([data])
-                : data,
-            options: Options(
-              requestEncoder: (_, __) => data,
-              headers: headers,
-              contentType: contentType.toString(),
-              responseType: responseType,
-            ),
-          )
-          .timeout(
-            const Duration(seconds: 8), // 8s timeout
-          );
+      Response response = await _dio().post(
+        url,
+        data: data,
+        onSendProgress: (int sent, int total) {
+          if (onSendProgress != null) {
+            onSendProgress.call(sent / total);
+          }
+        },
+        options: Options(
+          sendTimeout: sendTimeout,
+          receiveTimeout: receiveTimeout,
+          requestEncoder: (_, __) => data,
+          headers: headers,
+          contentType: contentType.toString(),
+          responseType: responseType,
+        ),
+      );
 
       return ArDriveHTTPResponse(
         data: response.data,
