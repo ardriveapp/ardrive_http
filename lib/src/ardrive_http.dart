@@ -220,7 +220,10 @@ class ArDriveHTTP {
     };
 
     final hasProgressIndicator = postIOParams['onSendProgress'] != null;
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
     final isStream = data is Stream;
 
     final isWebWorkerPossible = await _isWebWorkerPossible(
@@ -277,6 +280,8 @@ class ArDriveHTTP {
     Map<String, dynamic> headers = const <String, dynamic>{},
     ResponseType responseType = ResponseType.json,
     Function(double)? onSendProgress,
+    Duration sendTimeout = const Duration(seconds: 8),
+    Duration receiveTimeout = const Duration(seconds: 8),
   }) async {
     return post(
       url: url,
@@ -285,6 +290,8 @@ class ArDriveHTTP {
       contentType: ContentType.binary,
       responseType: responseType,
       onSendProgress: onSendProgress,
+      sendTimeout: sendTimeout,
+      receiveTimeout: receiveTimeout,
     );
   }
 
