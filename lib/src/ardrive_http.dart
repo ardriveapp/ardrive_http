@@ -436,6 +436,10 @@ class ArDriveHTTP {
         List.generate(retries, (index) => retryDelay(index));
 
     FutureOr<bool> setRetryAttempt(DioError error, int attempt) async {
+      if (error.response?.statusCode == 408) {
+        return false;
+      }
+
       bool shouldRetry =
           await RetryInterceptor.defaultRetryEvaluator(error, attempt);
 

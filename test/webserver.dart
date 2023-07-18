@@ -6,7 +6,6 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 
 List<int> retryStatusCodes = [
-  408,
   429,
   440,
   460,
