@@ -24,12 +24,14 @@ class ArDriveHTTPException extends Equatable implements Exception {
   final Object exception;
   final int? statusCode;
   final String? statusMessage;
+  final Object? data;
 
   const ArDriveHTTPException({
     required this.retryAttempts,
     required this.exception,
     this.statusCode,
     this.statusMessage,
+    this.data,
   });
 
   @override
@@ -46,12 +48,14 @@ class WebWorkerNetworkRequestError {
   final String? statusMessage;
   final int retryAttempts;
   final Object? error;
+  final Object? data;
 
   const WebWorkerNetworkRequestError({
     this.statusCode,
     this.statusMessage,
     required this.retryAttempts,
     this.error,
+    this.data,
   });
 
   @override
