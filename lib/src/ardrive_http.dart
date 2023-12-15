@@ -123,6 +123,7 @@ class ArDriveHTTP {
         exception: error,
         statusCode: error.response?.statusCode,
         statusMessage: error.response?.statusMessage,
+        data: error.response?.data,
       );
     } catch (error) {
       throw ArDriveHTTPException(
@@ -159,6 +160,7 @@ class ArDriveHTTP {
           statusMessage: response['statusMessage'],
           retryAttempts: retryAttempts,
           error: response['error'],
+          data: response['data'],
         );
       }
 
@@ -176,6 +178,7 @@ class ArDriveHTTP {
         exception: error,
         statusCode: error.statusCode,
         statusMessage: error.statusMessage,
+        data: error.data,
       );
     } catch (error) {
       throw ArDriveHTTPException(

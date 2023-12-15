@@ -1,6 +1,6 @@
 name: ardrive_http
 description: ArDrive Network abstractions
-version: 1.3.0
+version: 1.3.2
 publish_to: none
 
 environment:

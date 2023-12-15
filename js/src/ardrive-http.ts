@@ -111,12 +111,15 @@ var get = async ([
     } else {
       if (isStatusCodeError(statusCode)) {
         const log = logMessage(url, statusCode, statusMessage, retryAttempts);
-        
+
+        const data = await requestType['text'].getResponse(response);
+
         return {
           error: `Network Request Error\n${log}`,
           retryAttempts,
           statusCode,
           statusMessage,
+          data,
         };
       }
     }
